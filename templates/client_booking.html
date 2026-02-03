@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Book Appointment</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+
+<body class="bg-light">
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white text-center">
+                    <h4>Book an Appointment</h4>
+                </div>
+
+                <div class="card-body">
+
+                    <!-- ✅ SINGLE FORM -->
+                    <form method="post">
+                        {% csrf_token %}
+
+                        {% if form.errors %}
+                        <div class="alert alert-danger">
+                            {{ form.errors }}
+                        </div>
+                        {% endif %}
+
+                        <!-- DATE -->
+                        <div class="mb-2">
+                            <label>Date</label>
+                            <input type="date" name="date" class="form-control" required>
+                        </div>
+
+                        <!-- TIME -->
+                        <div class="mb-2">
+                            <label>Time</label>
+                            <input type="time" name="time" class="form-control" required>
+                        </div>
+
+                        <!-- NAME -->
+                        <div class="mb-2">
+                            <label>Name</label>
+                            {{ form.name }}
+                        </div>
+
+                        <!-- PHONE -->
+                        <div class="mb-2">
+                            <label>Phone</label>
+                            {{ form.phone }}
+                        </div>
+
+                        <!-- EMAIL -->
+                        <div class="mb-2">
+                            <label>Email</label>
+                            {{ form.email }}
+                        </div>
+
+                        <!-- SERVICE -->
+                        <div class="mb-2">
+                            <label>Service</label>
+                            {{ form.service }}
+                        </div>
+
+                        <!-- STAFF -->
+                        <div class="mb-2">
+                            <label>Staff</label>
+                            <select name="staff" id="staff" class="form-control" required>
+                                <option value="">Select staff</option>
+                            </select>
+                        </div>
+
+                        <div class="d-grid mt-3">
+                            <button class="btn btn-success">
+                                Book Appointment
+                            </button>
+                        </div>
+
+                    </form>
+                    <!-- ✅ FORM END -->
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- ✅ AJAX STAFF LOADER -->
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const dateInput = document.querySelector('input[name="date"]');
+    const timeInput = document.querySelector('input[name="time"]');
+    const staffSelect = document.getElementById('staff');
+
+    function loadStaff() {
+        const date = dateInput.value;
+        const time = timeInput.value;
+
+        if (!date || !time) {
+            staffSelect.innerHTML = '<option value="">Select staff</option>';
+            return;
+        }
+
+        fetch(`/ajax/available-staff/?date=${date}&time=${time}`)
+            .then(response => response.json())
+            .then(data => {
+                staffSelect.innerHTML = '<option value="">Select staff</option>';
+
+                if (data.staff.length === 0) {
+                    staffSelect.innerHTML +=
+                        '<option value="">No staff available</option>';
+                }
+
+                data.staff.forEach(staff => {
+                    staffSelect.innerHTML +=
+                        `<option value="${staff.id}">${staff.name}</option>`;
+                });
+            });
+    }
+
+    dateInput.addEventListener('change', loadStaff);
+    timeInput.addEventListener('change', loadStaff);
+});
+</script>
+
+</body>
+</html>
