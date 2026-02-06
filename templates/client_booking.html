@@ -16,79 +16,75 @@
                     <h4>Book an Appointment</h4>
                 </div>
 
-                <div class="card-body">
+<!-- 🔵 STEP 1: CHECK AVAILABILITY -->
+    <label class="form-label">Date</label>
+    <input type="date" name="date" value="{{ selected_date }}" class="form-control" required>
 
-                    <!-- ✅ SINGLE FORM -->
-                    <form method="post">
-                        {% csrf_token %}
+    <label class="form-label mt-2">Time</label>
+    <input type="time" name="time" value="{{ selected_time }}" class="form-control" required>
 
-                        {% if form.errors %}
-                        <div class="alert alert-danger">
-                            {{ form.errors }}
-                        </div>
-                        {% endif %}
+    <button class="btn btn-secondary w-100 mt-3">
+        Check Availability
+    </button>
+</form>
 
-                        <!-- DATE -->
-                        <div class="mb-2">
-                            <label>Date</label>
-                            <input type="date" name="date" class="form-control" required>
-                        </div>
+<!-- 🔵 STEP 2: BOOK APPOINTMENT -->
+<form method="post">
+    {% csrf_token %}
 
-                        <!-- TIME -->
-                        <div class="mb-2">
-                            <label>Time</label>
-                            <input type="time" name="time" class="form-control" required>
-                        </div>
-
-                        <!-- NAME -->
-                        <div class="mb-2">
-                            <label>Name</label>
-                            {{ form.name }}
-                        </div>
-
-                        <!-- PHONE -->
-                        <div class="mb-2">
-                            <label>Phone</label>
-                            {{ form.phone }}
-                        </div>
-
-                        <!-- EMAIL -->
-                        <div class="mb-2">
-                            <label>Email</label>
-                            {{ form.email }}
-                        </div>
-
-                        <!-- SERVICE -->
-                        <div class="mb-2">
-                            <label>Service</label>
-                            {{ form.service }}
-                        </div>
-
-                        <!-- STAFF -->
-                        <div class="mb-2">
-                            <label>Staff</label>
-                            <select name="staff" id="staff" class="form-control" required>
-                                <option value="">Select staff</option>
-                            </select>
-                        </div>
-
-                        <div class="d-grid mt-3">
-                            <button class="btn btn-success">
-                                Book Appointment
-                            </button>
-                        </div>
-
-                    </form>
-                    <!-- ✅ FORM END -->
-
-                </div>
-            </div>
-
-        </div>
+    {% if form.errors %}
+    <div class="alert alert-danger">
+        {{ form.errors }}
     </div>
-</div>
+    {% endif %}
 
-<!-- ✅ AJAX STAFF LOADER -->
+    <div class="mb-2">
+        <label>Date</label>
+        <input type="date" name="date" id="date" class="form-control" required>
+    </div>
+
+    <div class="mb-2">
+        <label>Time</label>
+        <input type="time" name="time" id="time" class="form-control" required>
+    </div>
+
+    <div class="mb-2">
+        <label>Name</label>
+        {{ form.name }}
+    </div>
+
+    <div class="mb-2">
+        <label>Phone</label>
+        {{ form.phone }}
+    </div>
+
+    <div class="mb-2">
+        <label>Email</label>
+        {{ form.email }}
+    </div>
+
+    <div class="mb-2">
+        <label>Service</label>
+        {{ form.service }}
+    </div>
+
+    <div class="mb-2">
+        <label>Staff</label>
+        <select name="staff" id="staff" class="form-control" required>
+            <option value="">Select staff</option>
+        </select>
+    </div>
+
+    <div class="d-grid mt-3">
+        <button class="btn btn-success">
+            Book Appointment
+        </button>
+    </div>
+</form>
+
+</div>
+</div>
+</div>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const dateInput = document.querySelector('input[name="date"]');

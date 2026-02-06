@@ -3,16 +3,24 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.views import LoginView
 from django.urls import reverse_lazy
 from django.db.models import Sum
+from django.utils import timezone
 from datetime import date
-from .models import Client, Staff, Service, Appointment
+from datetime import time
+from datetime import timedelta
+from django.utils import timezone
+from .models import Client, Staff, Service, Appointment,StaffAttendance, StaffPenalty
 from .forms import (
     AppointmentForm,
     ClientForm,
     StaffForm,
     ServiceForm,
     ClientBookingForm,
-
 )
+
+OFFICIAL_START_TIME = time(9, 0)       # 09:00
+GRACE_PERIOD_MINUTES = 10
+LATE_PENALTY_AMOUNT = 200
+
 
 # -------------------
 # ROLE HELPERS
@@ -25,6 +33,9 @@ def is_admin(user):
 
 def is_staff(user):
     return user.groups.filter(name='Staff').exists()
+
+def is_admin_or_staff(user):
+    return user.groups.filter(name__in=['Admin', 'Staff']).exists()
 
 # -------------------
 # LOGIN VIEW
@@ -240,6 +251,20 @@ def delete_service(request, service_id):
 def edit_client(request, client_id):
     client = get_object_or_404(Client, id=client_id)
 
+    if request.method == 'POST':
+        form = ClientForm(request.POST, instance=client)
+        if form.is_valid():
+            form.save()
+            return redirect('/clients/')
+    else:
+        form = ClientForm(instance=client)
+
+    # ✅ THIS RETURN IS REQUIRED
+    return render(request, 'add_form.html', {
+        'form': form,
+        'title': 'Edit Client'
+    })
+
 @login_required
 def appointments_list(request):
     appointments = Appointment.objects.select_related(
@@ -256,26 +281,92 @@ def appointments_list(request):
         if form.is_valid():
             form.save()
             return redirect('/clients/')
-    else:
-        form = ClientForm(instance=client)
+   # else:
+    #    form = ClientForm(instance=client)
 
     return render(request, 'add_form.html', {
         'form': form,
         'title': 'Edit Client'
     })
 
+def is_admin_or_staff(user):
+    return user.groups.filter(name__in=['Admin', 'Staff']).exists()
+
+@login_required
+@user_passes_test(is_admin_or_staff)
+def staff_attendance_list(request):
+    records = StaffAttendance.objects.order_by('-date')
+    staff_list = Staff.objects.all()
+    today = timezone.localdate()
+
+    return render(request, 'staff_attendance.html', {
+        'records': records,
+        'staff_list': staff_list,
+        'today': today
+    })
+
+@login_required
+@user_passes_test(is_admin_or_staff)
+def add_attendance(request):
+    form = StaffAttendanceForm(request.POST or None)
+    if form.is_valid():
+        form.save()
+        return redirect('/staff/attendance/')
+    return render(request, 'add_form.html', {'form': form, 'title': 'Add Attendance'})
+
+@login_required
+@user_passes_test(is_staff)
+def request_leave(request):
+    form = StaffLeaveForm(request.POST or None)
+    if form.is_valid():
+        leave = form.save(commit=False)
+        leave.staff = request.user.staff
+        leave.save()
+        return redirect('/')
+    return render(request, 'add_form.html', {'form': form, 'title': 'Request Leave'})
+
+@login_required
+@user_passes_test(is_admin)
+def staff_penalties(request):
+    penalties = StaffPenalty.objects.all()
+    return render(request, 'staff_penalties.html', {'penalties': penalties})
+
+@login_required
+@user_passes_test(is_admin)
+def staff_report(request, staff_id):
+    staff = Staff.objects.get(id=staff_id)
+
+    attendance_count = StaffAttendance.objects.filter(staff=staff).count()
+    leave_days = StaffLeave.objects.filter(staff=staff, approved=True).count()
+    penalties_total = StaffPenalty.objects.filter(staff=staff).aggregate(
+        total=Sum('amount')
+    )['total'] or 0
+
+    return render(request, 'staff_report.html', {
+        'staff': staff,
+        'attendance_count': attendance_count,
+        'leave_days': leave_days,
+        'penalties_total': penalties_total,
+    })
+@login_required
+@user_passes_test(is_admin_or_staff)
+def staff_attendance_list(request):
+    records = StaffAttendance.objects.order_by('-date')
+
 from .forms import ClientBookingForm
 from .models import Appointment, Client
-
 def client_booking(request):
-    # 1️⃣ Get date & time from request (GET for AJAX, POST for submit)
+    print("👉 client_booking view HIT:", request.method)
+    print("📦 POST DATA:", request.POST)
+
+    # 1️⃣ Get date & time from GET (AJAX) or POST (submit)
     selected_date = request.GET.get('date') or request.POST.get('date')
     selected_time = request.GET.get('time') or request.POST.get('time')
 
     # 2️⃣ Default: all staff
     available_staff = Staff.objects.all()
 
-    # 3️⃣ If date & time selected → exclude booked staff
+    # 3️⃣ Exclude staff already booked
     if selected_date and selected_time:
         booked_staff_ids = Appointment.objects.filter(
             date=selected_date,
@@ -284,14 +375,17 @@ def client_booking(request):
 
         available_staff = Staff.objects.exclude(id__in=booked_staff_ids)
 
-    # 4️⃣ Create form FIRST (important)
+    # 4️⃣ Create form
     form = ClientBookingForm(request.POST or None)
-
-    # 5️⃣ Inject dynamic staff queryset (CRITICAL)
     form.fields['staff'].queryset = available_staff
 
-    # 6️⃣ Handle POST (booking)
-    if request.method == 'POST' and form.is_valid():
+    # 5️⃣ Validate once
+    is_valid = form.is_valid()
+    print("🧪 FORM IS VALID:", is_valid)
+    print("❌ FORM ERRORS:", form.errors.as_json())
+
+    # 6️⃣ Handle POST
+    if request.method == 'POST' and is_valid:
         client, _ = Client.objects.get_or_create(
             phone=form.cleaned_data['phone'],
             defaults={
@@ -309,21 +403,15 @@ def client_booking(request):
             status='Pending'
         )
 
-        return redirect('/appointments/')  # or booking success page
+        return redirect('/booking-success/')
 
     # 7️⃣ Render page
-    return render(request, 'client_booking.html', {
-        'form': form
-    })
-    else:
-        form = ClientBookingForm()
-        form.fields['staff'].queryset = available_staff
-
     return render(request, 'client_booking.html', {
         'form': form,
         'selected_date': selected_date,
         'selected_time': selected_time
     })
+
 from django.http import JsonResponse
 
 def ajax_available_staff(request):
@@ -346,3 +434,65 @@ def ajax_available_staff(request):
     ]
 
     return JsonResponse({'staff': data})
+
+def is_admin_or_staff(user):
+    return user.groups.filter(name__in=['Admin', 'Staff']).exists()
+
+@login_required
+@user_passes_test(is_admin_or_staff)
+def staff_attendance_list(request):
+    today = timezone.localdate()
+
+    staff_list = Staff.objects.all()
+    attendance_map = {
+        a.staff_id: a
+        for a in StaffAttendance.objects.filter(date=today)
+    }
+
+    return render(request, 'staff_attendance.html', {
+        'staff_list': staff_list,
+        'attendance_map': attendance_map,
+        'today': today,
+    })
+
+@login_required
+def staff_check_in(request, staff_id):
+    staff = get_object_or_404(Staff, id=staff_id)
+
+    today = timezone.localdate()
+    now_time = timezone.localtime().time()
+
+    attendance, created = StaffAttendance.objects.get_or_create(
+        staff=staff,
+        date=today
+    )
+
+    if attendance.check_in is None:
+        attendance.check_in = now_time
+
+        late_limit_minutes = OFFICIAL_START_TIME.hour * 60 + OFFICIAL_START_TIME.minute + GRACE_PERIOD_MINUTES
+        now_minutes = now_time.hour * 60 + now_time.minute
+
+        if now_minutes > late_limit_minutes:
+            attendance.is_late = True
+            attendance.save()
+
+            StaffPenalty.objects.get_or_create(
+                staff=staff,
+                attendance=attendance,
+                defaults={
+                    'amount': LATE_PENALTY_AMOUNT,
+                    'reason': 'Late arrival'
+                }
+            )
+        else:
+            attendance.save()
+
+    return redirect('/staff/attendance/')
+
+@login_required
+def staff_check_out(request, attendance_id):
+    attendance = get_object_or_404(StaffAttendance, id=attendance_id)
+    attendance.check_out = timezone.localtime().time()
+    attendance.save()
+    return redirect('/staff/attendance/')

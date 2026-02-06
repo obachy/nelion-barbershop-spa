@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Book Appointment</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+
+<body class="bg-light">
+
+<nav class="navbar navbar-dark bg-dark">
+    <div class="container">
+        <span class="navbar-brand">Salon Management</span>
+        <a href="/appointments/" class="btn btn-outline-light btn-sm">Back</a>
+    </div>
+</nav>
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white text-center">
+                    <h4>Book Appointment</h4>
+                </div>
+
+                <div class="card-body">
+
+                    <!-- 🔴 THIS FORM TAG IS CRITICAL -->
+                    <form method="post">
+                        {% csrf_token %}
+
+			{% if form.errors %}
+			<div class="alert alert-danger">
+   			 <strong>Form errors:</strong>
+	   			 {{ form.errors }}
+			</div>
+			{% endif %}
+
+
+                        <div class="mb-3">
+                            <label class="form-label">Client</label>
+                            {{ form.client }}
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Staff</label>
+                            {{ form.staff }}
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Service</label>
+                            {{ form.service }}
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Date</label>
+                            {{ form.date }}
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Time</label>
+                            {{ form.time }}
+                        </div>
+
+                        <!-- 🔴 SUBMIT BUTTON MUST BE INSIDE FORM -->
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-success">
+                                Book Appointment
+                            </button>
+                        </div>
+
+                    </form>
+                    <!-- 🔴 FORM ENDS HERE -->
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

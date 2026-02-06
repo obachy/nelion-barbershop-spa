@@ -1,5 +1,5 @@
 from django.db import models
-
+from datetime import time
 
 class Client(models.Model):
     name = models.CharField(max_length=100)
@@ -47,3 +47,33 @@ class Appointment(models.Model):
 
     def __str__(self):
         return f"{self.client} - {self.date} {self.time}"
+
+class StaffAttendance(models.Model):
+    staff = models.ForeignKey(Staff, on_delete=models.CASCADE)
+    date = models.DateField()
+    check_in = models.TimeField()
+    check_out = models.TimeField(null=True, blank=True)
+
+    is_late = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"{self.staff.name} - {self.date}"
+
+class StaffLeave(models.Model):
+    staff = models.ForeignKey(Staff, on_delete=models.CASCADE)
+    start_date = models.DateField()
+    end_date = models.DateField()
+    reason = models.CharField(max_length=255)
+    approved = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"{self.staff.name} Leave ({self.start_date} → {self.end_date})"
+
+class StaffPenalty(models.Model):
+    staff = models.ForeignKey(Staff, on_delete=models.CASCADE)
+    date = models.DateField()
+    reason = models.CharField(max_length=255)
+    amount = models.DecimalField(max_digits=8, decimal_places=2)
+
+    def __str__(self):
+        return f"{self.staff.name} - {self.amount}"

@@ -1,0 +1,169 @@
+from django.contrib.auth.decorators import login_required, user_passes_test
+
+from django.shortcuts import render, redirect, get_object_or_404
+from datetime import date
+from django.db.models import Sum
+
+from .models import Client, Staff, Service, Appointment
+from .forms import AppointmentForm
+
+def is_admin(user):
+    return user.groups.filter(name='Admin').exists()
+
+def is_staff(user):
+    return user.groups.filter(name='Staff').exists()
+
+def dashboard(request):
+    today = date.today()
+
+    todays_appointments = Appointment.objects.filter(date=today)
+    upcoming_appointments = Appointment.objects.filter(date__gt=today).order_by('date')[:5]
+
+    todays_revenue = todays_appointments.aggregate(
+        total=Sum('service__price')
+    )['total'] or 0
+
+    context = {
+        'clients': Client.objects.count(),
+        'staff': Staff.objects.count(),
+        'services': Service.objects.count(),
+        'appointments': Appointment.objects.count(),
+        'todays_appointments': todays_appointments,
+        'upcoming_appointments': upcoming_appointments,
+        'todays_revenue': todays_revenue,
+    }
+
+    return render(request, 'dashboard.html', context)
+
+
+def update_appointment_status(request, appointment_id):
+    appointment = get_object_or_404(Appointment, id=appointment_id)
+
+    if request.method == 'POST':
+        new_status = request.POST.get('status')
+        if new_status in ['Pending', 'Completed', 'Cancelled']:
+            appointment.status = new_status
+            appointment.save()
+
+    return redirect('/')
+
+
+def book_appointment(request):
+    if request.method == 'POST':
+        form = AppointmentForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('/')
+    else:
+        form = AppointmentForm()
+
+    return render(request, 'book_appointment.html', {'form': form})
+
+def clients_list(request):
+    clients = Client.objects.all()
+    return render(request, 'clients.html', {'clients': clients})
+
+def staff_list(request):
+    staff = Staff.objects.all()
+    return render(request, 'staff.html', {'staff': staff})
+
+def services_list(request):
+    services = Service.objects.all()
+    return render(request, 'services.html', {'services': services})
+from .forms import ServiceForm
+
+def edit_service(request, service_id):
+    service = Service.objects.get(id=service_id)
+
+    if request.method == 'POST':
+        form = ServiceForm(request.POST, instance=service)
+        if form.is_valid():
+            form.save()
+            return redirect('/services/')
+    else:
+        form = ServiceForm(instance=service)
+
+    return render(request, 'edit_service.html', {'form': form})
+
+
+def delete_service(request, service_id):
+    service = Service.objects.get(id=service_id)
+    service.delete()
+    return redirect('/services/')
+
+def appointments_list(request):
+    appointments = Appointment.objects.select_related(
+        'client', 'staff', 'service'
+    ).order_by('-date', '-time')
+
+    return render(request, 'appointments.html', {
+        'appointments': appointments
+    })
+from django.shortcuts import get_object_or_404
+from .forms import AppointmentForm
+
+def edit_appointment(request, appointment_id):
+    appointment = get_object_or_404(Appointment, id=appointment_id)
+
+    if request.method == 'POST':
+        form = AppointmentForm(request.POST, instance=appointment)
+        if form.is_valid():
+            form.save()
+            return redirect('/appointments/')
+    else:
+        form = AppointmentForm(instance=appointment)
+
+    return render(request, 'edit_appointment.html', {'form': form})
+
+
+def delete_appointment(request, appointment_id):
+    appointment = get_object_or_404(Appointment, id=appointment_id)
+    appointment.delete()
+    return redirect('/appointments/')
+
+from .forms import ClientForm
+
+def add_client(request):
+    if request.method == 'POST':
+        form = ClientForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('/')
+    else:
+        form = ClientForm()
+
+    return render(request, 'add_form.html', {
+        'form': form,
+        'title': 'Add Client'
+    })
+from .forms import StaffForm
+
+def add_staff(request):
+    if request.method == 'POST':
+        form = StaffForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('/')
+    else:
+        form = StaffForm()
+
+    return render(request, 'add_form.html', {
+        'form': form,
+        'title': 'Add Staff'
+    })
+
+from .forms import ServiceForm
+
+def add_service(request):
+    if request.method == 'POST':
+        form = ServiceForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('/')
+    else:
+        form = ServiceForm()
+
+    return render(request, 'add_form.html', {
+        'form': form,
+        'title': 'Add Service'
+    })

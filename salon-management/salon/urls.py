@@ -1,4 +1,5 @@
 from django.urls import path
+from django.shortcuts import render
 from .views import (
     dashboard,
     book_appointment,
@@ -17,6 +18,12 @@ from .views import (
     edit_client,
     client_booking,
     ajax_available_staff,
+    staff_attendance_list,
+    add_attendance,
+    request_leave,
+    staff_penalties,
+    staff_check_in,
+    staff_check_out
 )
 
 urlpatterns = [
@@ -46,5 +53,12 @@ urlpatterns = [
     path('services/delete/<int:service_id>/', delete_service, name='delete_service'),
     path('clients/edit/<int:client_id>/', edit_client, name='edit_client'),
     path('ajax/available-staff/', ajax_available_staff, name='ajax_available_staff'),
+    path('booking-success/', lambda request: render(request, 'booking_success.html'), name='booking_success'),
+    path('staff/attendance/', staff_attendance_list),
+    path('staff/attendance/add/', add_attendance),
+    path('staff/leave/request/', request_leave),
+    path('staff/penalties/', staff_penalties),
+    path('staff/check-in/<int:staff_id>/', staff_check_in),
+    path('staff/check-out/<int:attendance_id>/', staff_check_out),
 
 ]
