@@ -303,12 +303,16 @@ def is_admin_or_staff(user):
 def staff_attendance_list(request):
     today = timezone.localdate()
 
+    # 1️⃣ Get all staff
     staff_list = Staff.objects.all()
-    attendance_records = StaffAttendance.objects.filter(date=today)
 
+    # 2️⃣ Get today's attendance records
+    attendance_qs = StaffAttendance.objects.filter(date=today)
+
+    # 3️⃣ Build attendance map { staff_id : attendance }
     attendance_map = {}
-    for a in attendance_records:
-        attendance_map[a.staff_id] = a
+    for att in attendance_qs:
+        attendance_map[att.staff_id] = att
 
     return render(request, 'staff_attendance.html', {
         'staff_list': staff_list,

@@ -34,60 +34,52 @@
                         <th>Action</th>
                     </tr>
                 </thead>
-               <tbody>
+                <tbody>
 {% for staff in staff_list %}
 <tr>
     <td>{{ staff.name }}</td>
     <td>{{ today }}</td>
 
-    {% with found_attendance=None %}
-        {% for att in attendance_map.values %}
-            {% if att.staff_id == staff.id %}
-                {% with found_attendance=att %}
-                {% endwith %}
+    {% if staff.id in attendance_map %}
+        {% with attendance=attendance_map|dict_get:staff.id %}
+        <td>{{ attendance.check_in }}</td>
+        <td>{{ attendance.check_out|default:"—" }}</td>
+
+        <td>
+            {% if attendance.is_late %}
+                <span class="badge bg-danger">Late</span>
+            {% else %}
+                <span class="badge bg-success">On Time</span>
             {% endif %}
-        {% endfor %}
+        </td>
 
-        {% if found_attendance %}
-            <td>{{ found_attendance.check_in }}</td>
-            <td>{{ found_attendance.check_out|default:"—" }}</td>
-
-            <td>
-                {% if found_attendance.is_late %}
-                    <span class="badge bg-danger">Late</span>
-                {% else %}
-                    <span class="badge bg-success">On Time</span>
-                {% endif %}
-            </td>
-
-            <td>
-                {% if not found_attendance.check_out %}
-                    <a href="/staff/check-out/{{ found_attendance.id }}/"
-                       class="btn btn-warning btn-sm">
-                        Check Out
-                    </a>
-                {% else %}
-                    —
-                {% endif %}
-            </td>
-        {% else %}
-            <td>—</td>
-            <td>—</td>
-            <td>
-                <span class="badge bg-secondary">Not Checked In</span>
-            </td>
-            <td>
-                <a href="/staff/check-in/{{ staff.id }}/"
-                   class="btn btn-success btn-sm">
-                    Check In
+        <td>
+            {% if not attendance.check_out %}
+                <a href="/staff/check-out/{{ attendance.id }}/"
+                   class="btn btn-warning btn-sm">
+                   Check Out
                 </a>
-            </td>
-        {% endif %}
-    {% endwith %}
+            {% else %}
+                —
+            {% endif %}
+        </td>
+        {% endwith %}
+    {% else %}
+        <td>—</td>
+        <td>—</td>
+        <td>
+            <span class="badge bg-secondary">Not Checked In</span>
+        </td>
+        <td>
+            <a href="/staff/check-in/{{ staff.id }}/"
+               class="btn btn-success btn-sm">
+               Check In
+            </a>
+        </td>
+    {% endif %}
 </tr>
 {% endfor %}
 </tbody>
-
             </table>
         </div>
     </div>
