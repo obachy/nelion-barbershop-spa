@@ -4,11 +4,17 @@ from django.contrib.auth.views import LoginView
 from django.urls import reverse_lazy
 from django.db.models import Sum
 from django.utils import timezone
-from datetime import date
-from datetime import time
-from datetime import timedelta
-from django.utils import timezone
-from .models import Client, Staff, Service, Appointment,StaffAttendance, StaffPenalty
+from datetime import date, time, timedelta
+
+from .models import (
+    Client,
+    Staff,
+    Service,
+    Appointment,
+    StaffAttendance,
+    StaffPenalty,
+)
+
 from .forms import (
     AppointmentForm,
     ClientForm,
@@ -295,12 +301,19 @@ def is_admin_or_staff(user):
 @login_required
 @user_passes_test(is_admin_or_staff)
 def staff_attendance_list(request):
-    records = StaffAttendance.objects.order_by('-date')
-    staff_list = Staff.objects.all()   # 🔴 REQUIRED
+    today = timezone.localdate()
+
+    staff_list = Staff.objects.all()
+    attendance_records = StaffAttendance.objects.filter(date=today)
+
+    attendance_map = {}
+    for a in attendance_records:
+        attendance_map[a.staff_id] = a
 
     return render(request, 'staff_attendance.html', {
-        'records': records,
-        'staff_list': staff_list,      # 🔴 REQUIRED
+        'staff_list': staff_list,
+        'attendance_map': attendance_map,
+        'today': today,
     })
 
 @login_required
@@ -442,9 +455,12 @@ def staff_attendance_list(request):
     today = timezone.localdate()
 
     staff_list = Staff.objects.all()
+
+    attendance_qs = StaffAttendance.objects.filter(date=today)
+
+    # 🔑 Create a dictionary: staff_id → attendance
     attendance_map = {
-        a.staff_id: a
-        for a in StaffAttendance.objects.filter(date=today)
+        att.staff_id: att for att in attendance_qs
     }
 
     return render(request, 'staff_attendance.html', {
@@ -462,32 +478,31 @@ def staff_check_in(request, staff_id):
 
     attendance, created = StaffAttendance.objects.get_or_create(
         staff=staff,
-        date=today
+        date=today,
+        defaults={'check_in': now_time}
     )
 
-    if attendance.check_in is None:
-        attendance.check_in = now_time
+    # Late check
+    late_limit = time(
+        OFFICIAL_START_TIME.hour,
+        OFFICIAL_START_TIME.minute + GRACE_PERIOD_MINUTES
+    )
 
-        late_limit_minutes = OFFICIAL_START_TIME.hour * 60 + OFFICIAL_START_TIME.minute + GRACE_PERIOD_MINUTES
-        now_minutes = now_time.hour * 60 + now_time.minute
+    if now_time > late_limit:
+        attendance.is_late = True
+        attendance.save()
 
-        if now_minutes > late_limit_minutes:
-            attendance.is_late = True
-            attendance.save()
-
-            StaffPenalty.objects.get_or_create(
-                staff=staff,
-                attendance=attendance,
-                defaults={
-                    'amount': LATE_PENALTY_AMOUNT,
-                    'reason': 'Late arrival'
-                }
-            )
-        else:
-            attendance.save()
+        StaffPenalty.objects.get_or_create(
+            staff=staff,
+            date=today,
+            defaults={
+                'amount': LATE_PENALTY_AMOUNT,
+                'reason': 'Late arrival'
+            }
+        )
 
     return redirect('/staff/attendance/')
-
+0
 @login_required
 def staff_check_out(request, attendance_id):
     attendance = get_object_or_404(StaffAttendance, id=attendance_id)

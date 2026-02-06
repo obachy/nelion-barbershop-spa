@@ -59,6 +59,6 @@ urlpatterns = [
     path('staff/leave/request/', request_leave),
     path('staff/penalties/', staff_penalties),
     path('staff/check-in/<int:staff_id>/', staff_check_in),
-    path('staff/check-out/<int:attendance_id>/', staff_check_out),
+    path('staff/check-out/<int:attendance_id>/', staff_check_out, name='staff_check_out'),
 
 ]
