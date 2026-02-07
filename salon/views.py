@@ -17,15 +17,18 @@ from .forms import (
 # -------------------
 # ROLE HELPERS
 # -------------------
-def is_admin_or_staff(user):
-    return user.groups.filter(name__in=['Admin', 'Staff']).exists()
-
 def is_admin(user):
     return user.groups.filter(name='Admin').exists()
 
 def is_staff(user):
     return user.groups.filter(name='Staff').exists()
 
+<<<<<<< HEAD
+=======
+def is_admin_or_staff(user):
+    return is_admin(user) or is_staff(user)
+
+>>>>>>> 3c72d3d (Describe change)
 # -------------------
 # LOGIN VIEW
 # -------------------
@@ -47,7 +50,7 @@ class RoleBasedLoginView(LoginView):
 # DASHBOARD (ADMIN ONLY)
 # -------------------
 @login_required
-@user_passes_test(is_admin, login_url='/appointments/')
+@user_passes_test(is_admin_or_staff)
 def dashboard(request):
     today = date.today()
 
@@ -62,6 +65,8 @@ def dashboard(request):
         'services': Service.objects.count(),
         'appointments': Appointment.objects.count(),
         'todays_revenue': todays_revenue,
+        'is_admin': request.user.groups.filter(name='Admin').exists(),
+        'is_staff': request.user.groups.filter(name='Staff').exists(),
     }
 
     return render(request, 'dashboard.html', context)
@@ -266,16 +271,22 @@ def appointments_list(request):
 
 from .forms import ClientBookingForm
 from .models import Appointment, Client
+<<<<<<< HEAD
 
 def client_booking(request):
     # 1️⃣ Get date & time from request (GET for AJAX, POST for submit)
+=======
+def client_booking(request):
+>>>>>>> 3c72d3d (Describe change)
     selected_date = request.GET.get('date') or request.POST.get('date')
     selected_time = request.GET.get('time') or request.POST.get('time')
 
-    # 2️⃣ Default: all staff
     available_staff = Staff.objects.all()
 
+<<<<<<< HEAD
     # 3️⃣ If date & time selected → exclude booked staff
+=======
+>>>>>>> 3c72d3d (Describe change)
     if selected_date and selected_time:
         booked_staff_ids = Appointment.objects.filter(
             date=selected_date,
@@ -284,13 +295,19 @@ def client_booking(request):
 
         available_staff = Staff.objects.exclude(id__in=booked_staff_ids)
 
+<<<<<<< HEAD
     # 4️⃣ Create form FIRST (important)
+=======
+>>>>>>> 3c72d3d (Describe change)
     form = ClientBookingForm(request.POST or None)
 
     # 5️⃣ Inject dynamic staff queryset (CRITICAL)
     form.fields['staff'].queryset = available_staff
 
+<<<<<<< HEAD
     # 6️⃣ Handle POST (booking)
+=======
+>>>>>>> 3c72d3d (Describe change)
     if request.method == 'POST' and form.is_valid():
         client, _ = Client.objects.get_or_create(
             phone=form.cleaned_data['phone'],
@@ -304,14 +321,17 @@ def client_booking(request):
             client=client,
             staff=form.cleaned_data['staff'],
             service=form.cleaned_data['service'],
-            date=selected_date,
-            time=selected_time,
+            date=form.cleaned_data['date'],
+            time=form.cleaned_data['time'],
             status='Pending'
         )
 
+<<<<<<< HEAD
         return redirect('/appointments/')  # or booking success page
+=======
+        return render(request, 'booking_success.html')
+>>>>>>> 3c72d3d (Describe change)
 
-    # 7️⃣ Render page
     return render(request, 'client_booking.html', {
         'form': form
     })
