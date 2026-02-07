@@ -28,7 +28,7 @@ urlpatterns = [
     path('appointments/', appointments_list, name='appointments'),
     path('appointments/edit/<int:appointment_id>/', edit_appointment, name='edit_appointment'),
     path('appointments/delete/<int:appointment_id>/', delete_appointment, name='delete_appointment'),
-    path('update-status/<int:appointment_id>/', update_appointment_status, name='update_status'),
+   # path('update-status/<int:appointment_id>/', update_appointment_status, name='update_status'),
     path('client-booking/', client_booking, name='client_booking'),
 
     # Clients
