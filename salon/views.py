@@ -23,12 +23,8 @@ def is_admin(user):
 def is_staff(user):
     return user.groups.filter(name='Staff').exists()
 
-<<<<<<< HEAD
-=======
 def is_admin_or_staff(user):
     return is_admin(user) or is_staff(user)
-
->>>>>>> 3c72d3d (Describe change)
 # -------------------
 # LOGIN VIEW
 # -------------------
@@ -271,22 +267,16 @@ def appointments_list(request):
 
 from .forms import ClientBookingForm
 from .models import Appointment, Client
-<<<<<<< HEAD
 
 def client_booking(request):
     # 1️⃣ Get date & time from request (GET for AJAX, POST for submit)
-=======
 def client_booking(request):
->>>>>>> 3c72d3d (Describe change)
     selected_date = request.GET.get('date') or request.POST.get('date')
     selected_time = request.GET.get('time') or request.POST.get('time')
 
     available_staff = Staff.objects.all()
 
-<<<<<<< HEAD
     # 3️⃣ If date & time selected → exclude booked staff
-=======
->>>>>>> 3c72d3d (Describe change)
     if selected_date and selected_time:
         booked_staff_ids = Appointment.objects.filter(
             date=selected_date,
@@ -295,19 +285,13 @@ def client_booking(request):
 
         available_staff = Staff.objects.exclude(id__in=booked_staff_ids)
 
-<<<<<<< HEAD
     # 4️⃣ Create form FIRST (important)
-=======
->>>>>>> 3c72d3d (Describe change)
     form = ClientBookingForm(request.POST or None)
 
     # 5️⃣ Inject dynamic staff queryset (CRITICAL)
     form.fields['staff'].queryset = available_staff
 
-<<<<<<< HEAD
     # 6️⃣ Handle POST (booking)
-=======
->>>>>>> 3c72d3d (Describe change)
     if request.method == 'POST' and form.is_valid():
         client, _ = Client.objects.get_or_create(
             phone=form.cleaned_data['phone'],
@@ -326,11 +310,8 @@ def client_booking(request):
             status='Pending'
         )
 
-<<<<<<< HEAD
         return redirect('/appointments/')  # or booking success page
-=======
         return render(request, 'booking_success.html')
->>>>>>> 3c72d3d (Describe change)
 
     return render(request, 'client_booking.html', {
         'form': form
