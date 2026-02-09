@@ -8,6 +8,8 @@ from django.utils import timezone
 from django.http import JsonResponse
 from datetime import date, time, timedelta
 from django.views.decorators.csrf import csrf_protect
+from django.db.models import Count, Sum, F
+from django.db.models.functions import Coalesce
 from .models import (
     Client,
     Staff,
@@ -378,3 +380,36 @@ def ajax_available_staff(request):
     ]
 
     return JsonResponse({'staff': staff_data})
+# salon/views.py
+
+@login_required
+@user_passes_test(is_admin)
+def staff_commission_report(request):
+    staff_data = []
+
+    staff_members = Staff.objects.all()
+
+    for staff in staff_members:
+        completed_appointments = Appointment.objects.filter(
+            staff=staff,
+            status='Completed'
+        )
+
+        completed_jobs = completed_appointments.count()
+
+        total_sales = completed_appointments.aggregate(
+            total=Coalesce(Sum('service__price'), 0)
+        )['total']
+
+        commission_earned = (total_sales * staff.commission) / 100
+
+        staff_data.append({
+            'staff': staff.name,
+            'jobs': completed_jobs,
+            'sales': total_sales,
+            'commission': commission_earned,
+        })
+
+    return render(request, 'commission/staff_commission.html', {
+        'staff_data': staff_data
+    })

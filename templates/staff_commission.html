@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Staff Commission Report</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    >
+</head>
+
+<body class="bg-light">
+
+<nav class="navbar navbar-dark bg-dark">
+    <div class="container">
+        <span class="navbar-brand">Staff Commission Report</span>
+        <a href="/" class="btn btn-outline-light btn-sm">Dashboard</a>
+    </div>
+</nav>
+
+<div class="container mt-4">
+
+    <div class="card shadow">
+        <div class="card-header bg-success text-white">
+            Commission Summary
+        </div>
+
+        <div class="card-body p-0">
+            <table class="table table-striped mb-0">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Staff</th>
+                        <th>Completed Jobs</th>
+                        <th>Total Sales (KES)</th>
+                        <th>Commission (%)</th>
+                        <th>Commission Earned (KES)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in report %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ row.staff.name }}</td>
+                        <td>{{ row.appointments }}</td>
+                        <td>KES {{ row.total_sales }}</td>
+                        <td>{{ row.staff.commission }}%</td>
+                        <td>
+                            <strong>KES {{ row.commission }}</strong>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted">
+                            No commission data available
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+
+</div>
+
+</body>
+</html>

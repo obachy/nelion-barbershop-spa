@@ -17,6 +17,7 @@ from .views import (
     edit_client,
     client_booking,
     ajax_available_staff,
+    staff_commission_report,
 )
 
 urlpatterns = [
@@ -46,5 +47,6 @@ urlpatterns = [
     path('services/delete/<int:service_id>/', delete_service, name='delete_service'),
     path('clients/edit/<int:client_id>/', edit_client, name='edit_client'),
     path('ajax/available-staff/', ajax_available_staff, name='ajax_available_staff'),
+    path('staff/commission/', staff_commission_report, name='staff_commission'),
 
 ]
