@@ -18,6 +18,9 @@ from .views import (
     client_booking,
     ajax_available_staff,
     staff_commission_report,
+    staff_attendance_list,   # 👈 ADD THIS
+    staff_check_in,          # 👈 AND THIS
+    staff_check_out,
 )
 
 urlpatterns = [
@@ -48,5 +51,8 @@ urlpatterns = [
     path('clients/edit/<int:client_id>/', edit_client, name='edit_client'),
     path('ajax/available-staff/', ajax_available_staff, name='ajax_available_staff'),
     path('staff/commission/', staff_commission_report, name='staff_commission'),
+    path('staff/attendance/', staff_attendance_list, name='staff_attendance'),
+    path('staff/check-in/<int:staff_id>/', staff_check_in, name='staff_check_in'),
+    path('staff/check-out/<int:attendance_id>/', staff_check_out, name='staff_check_out'),
 
 ]
