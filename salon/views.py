@@ -8,8 +8,9 @@ from django.utils import timezone
 from django.http import JsonResponse
 from datetime import date, time, timedelta
 from django.views.decorators.csrf import csrf_protect
-from django.db.models import Count, Sum, F
-from django.db.models.functions import Coalesce
+from django.db.models import Count, Sum, F, DecimalField, ExpressionWrapper, Q, Value
+from django.db.models.functions import Coalesce, Cast
+from datetime import datetime
 from .models import (
     Client,
     Staff,
@@ -259,57 +260,47 @@ GRACE_PERIOD_MINUTES = 10
 LATE_PENALTY_AMOUNT = 200
 
 @login_required
-@user_passes_test(is_admin_or_staff)
 def staff_attendance_list(request):
-    records = StaffAttendance.objects.select_related('staff').order_by('-date')
+    today = timezone.localdate()
+
     staff_list = Staff.objects.all()
 
-    return render(request, 'staff_attendance.html', {
-        'records': records,
+    # Get today's attendance
+    attendances = StaffAttendance.objects.filter(date=today)
+
+    # Build dictionary: {staff_id: attendance_object}
+    attendance_map = {a.staff_id: a for a in attendances}
+
+    context = {
         'staff_list': staff_list,
-        'today': date.today(),
-    })
+        'attendance_map': attendance_map,
+        'today': today,
+    }
+
+    return render(request, 'staff_attendance.html', context)
 
 @login_required
-@user_passes_test(is_admin_or_staff)
 def staff_check_in(request, staff_id):
     staff = get_object_or_404(Staff, id=staff_id)
     today = timezone.localdate()
     now_time = timezone.localtime().time()
 
-    attendance, created = StaffAttendance.objects.get_or_create(
+    StaffAttendance.objects.get_or_create(
         staff=staff,
         date=today,
         defaults={'check_in': now_time}
     )
 
-    late_limit = (
-        datetime.combine(today, OFFICIAL_START_TIME) +
-        timedelta(minutes=GRACE_PERIOD_MINUTES)
-    ).time()
-
-    if now_time > late_limit:
-        attendance.is_late = True
-        attendance.save()
-
-        StaffPenalty.objects.get_or_create(
-            staff=staff,
-            date=today,
-            defaults={
-                'amount': LATE_PENALTY_AMOUNT,
-                'reason': 'Late arrival'
-            }
-        )
-
-    return redirect('/staff/attendance/')
+    return redirect('staff_attendance')
 
 @login_required
-@user_passes_test(is_admin_or_staff)
 def staff_check_out(request, attendance_id):
     attendance = get_object_or_404(StaffAttendance, id=attendance_id)
     attendance.check_out = timezone.localtime().time()
     attendance.save()
-    return redirect('/staff/attendance/')
+
+    return redirect('staff_attendance')
+
 @login_required
 @user_passes_test(is_admin)
 def edit_service(request, service_id):
@@ -381,35 +372,53 @@ def ajax_available_staff(request):
 
     return JsonResponse({'staff': staff_data})
 # salon/views.py
-
 @login_required
 @user_passes_test(is_admin)
 def staff_commission_report(request):
-    staff_data = []
 
-    staff_members = Staff.objects.all()
+    selected_month = request.GET.get('month')
+    selected_year = request.GET.get('year')
 
-    for staff in staff_members:
-        completed_appointments = Appointment.objects.filter(
-            staff=staff,
-            status='Completed'
+    # default month/year
+    if not selected_month:
+        selected_month = date.today().month
+    if not selected_year:
+        selected_year = date.today().year
+
+    appointments = Appointment.objects.filter(
+        status='Completed',
+        date__month=selected_month,
+        date__year=selected_year
+    )
+
+    report = (
+        Staff.objects
+        .annotate(
+            completed_jobs=Count(
+                'appointment',
+                filter=Q(
+                    appointment__status='Completed',
+                    appointment__date__month=selected_month,
+                    appointment__date__year=selected_year
+                )
+            ),
+            total_sales=Coalesce(
+                Sum(
+                    'appointment__service__price',
+                    filter=Q(
+                        appointment__status='Completed',
+                        appointment__date__month=selected_month,
+                        appointment__date__year=selected_year
+                    )
+                ),
+                0,
+                output_field=DecimalField()
+            )
         )
+    )
 
-        completed_jobs = completed_appointments.count()
-
-        total_sales = completed_appointments.aggregate(
-            total=Coalesce(Sum('service__price'), 0)
-        )['total']
-
-        commission_earned = (total_sales * staff.commission) / 100
-
-        staff_data.append({
-            'staff': staff.name,
-            'jobs': completed_jobs,
-            'sales': total_sales,
-            'commission': commission_earned,
-        })
-
-    return render(request, 'commission/staff_commission.html', {
-        'staff_data': staff_data
+    return render(request, 'staff_commission.html', {
+        'report': report,
+        'selected_month': selected_month,
+        'selected_year': selected_year,
     })

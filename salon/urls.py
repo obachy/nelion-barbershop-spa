@@ -54,5 +54,6 @@ urlpatterns = [
     path('staff/attendance/', staff_attendance_list, name='staff_attendance'),
     path('staff/check-in/<int:staff_id>/', staff_check_in, name='staff_check_in'),
     path('staff/check-out/<int:attendance_id>/', staff_check_out, name='staff_check_out'),
+    path('staff/commission/', staff_commission_report, name='staff_commission'),
 
 ]
