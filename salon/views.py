@@ -11,6 +11,8 @@ from django.views.decorators.csrf import csrf_protect
 from django.db.models import Count, Sum, F, DecimalField, ExpressionWrapper, Q, Value
 from django.db.models.functions import Coalesce, Cast
 from datetime import datetime
+from django.contrib import messages
+from decimal import Decimal
 from .models import (
     Client,
     Staff,
@@ -89,13 +91,13 @@ def dashboard(request):
 @login_required
 @user_passes_test(is_admin_or_staff)
 def appointments_list(request):
-    appointments = Appointment.objects.select_related(
-        'client', 'staff', 'service'
-    ).order_by('-date', '-time')
+    appointments = Appointment.objects.all()
 
     return render(request, 'appointments.html', {
-        'appointments': appointments
+        'appointments': appointments,
+        'is_admin': request.user.groups.filter(name='Admin').exists(),
     })
+
 @login_required
 @user_passes_test(is_admin_or_staff)
 def edit_appointment(request, appointment_id):
@@ -422,3 +424,32 @@ def staff_commission_report(request):
         'selected_month': selected_month,
         'selected_year': selected_year,
     })
+
+
+from decimal import Decimal
+from django.contrib import messages
+
+@login_required
+def complete_appointment(request, appointment_id):
+    appointment = get_object_or_404(Appointment, id=appointment_id)
+
+    if appointment.status == 'Completed':
+        messages.info(request, "Already completed.")
+        return redirect('/appointments/')
+
+    appointment.status = 'Completed'
+
+    service_price = Decimal(str(appointment.service.price))
+    commission_rate = Decimal(str(appointment.staff.commission))
+
+    commission_amount = (service_price * commission_rate) / Decimal('100')
+
+    appointment.commission_earned = commission_amount
+    appointment.save()
+
+    messages.success(
+        request,
+        f"Completed! Commission Earned: KES {commission_amount}"
+    )
+
+    return redirect('/appointments/')

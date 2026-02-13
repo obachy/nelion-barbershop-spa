@@ -21,6 +21,7 @@ from .views import (
     staff_attendance_list,   # 👈 ADD THIS
     staff_check_in,          # 👈 AND THIS
     staff_check_out,
+    complete_appointment,
 )
 
 urlpatterns = [
@@ -55,5 +56,8 @@ urlpatterns = [
     path('staff/check-in/<int:staff_id>/', staff_check_in, name='staff_check_in'),
     path('staff/check-out/<int:attendance_id>/', staff_check_out, name='staff_check_out'),
     path('staff/commission/', staff_commission_report, name='staff_commission'),
+    path('appointments/complete/<int:appointment_id>/',
+     complete_appointment,
+     name='complete_appointment'),
 
 ]
