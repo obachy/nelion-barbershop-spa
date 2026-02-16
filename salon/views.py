@@ -323,56 +323,60 @@ def edit_service(request, service_id):
 
 @csrf_protect
 def client_booking(request):
-    if request.method == 'POST':
-        form = ClientBookingForm(request.POST)
-        if form.is_valid():
-            # Create or get client
-            client, _ = Client.objects.get_or_create(
-                phone=form.cleaned_data['phone'],
-                defaults={
-                    'name': form.cleaned_data['name'],
-                    'email': form.cleaned_data['email']
-                }
-            )
 
-            # Create appointment
-            Appointment.objects.create(
-                client=client,
-                staff=form.cleaned_data['staff'],
-                service=form.cleaned_data['service'],
-                date=form.cleaned_data['date'],
-                time=form.cleaned_data['time'],
-                status='Pending'
-            )
+    if request.method == "POST":
+        name = request.POST.get('name')
+        phone = request.POST.get('phone')
+        email = request.POST.get('email')
+        service_id = request.POST.get('service')
+        staff_id = request.POST.get('staff')
+        date = request.POST.get('date')
+        time = request.POST.get('time')
 
-            return render(request, 'booking_success.html')
+        # Create or get client
+        client, _ = Client.objects.get_or_create(
+            phone=phone,
+            defaults={'name': name, 'email': email}
+        )
 
-    else:
-        form = ClientBookingForm()
+        # Create appointment
+        Appointment.objects.create(
+            client=client,
+            service_id=service_id,
+            staff_id=staff_id,
+            date=date,
+            time=time,
+            status='Pending'
+        )
+
+        return render(request, 'booking_success.html')
+
+    services = Service.objects.all()
+    staff = Staff.objects.all()
 
     return render(request, 'client_booking.html', {
-        'form': form
+        'services': services,
+        'staff': staff
     })
+
 def ajax_available_staff(request):
     date = request.GET.get('date')
     time = request.GET.get('time')
 
-    if not date or not time:
-        return JsonResponse({'staff': []})
-
-    booked_staff_ids = Appointment.objects.filter(
+    booked = Appointment.objects.filter(
         date=date,
         time=time
     ).values_list('staff_id', flat=True)
 
-    available_staff = Staff.objects.exclude(id__in=booked_staff_ids)
+    available = Staff.objects.exclude(id__in=booked)
 
-    staff_data = [
-        {'id': staff.id, 'name': staff.name}
-        for staff in available_staff
+    data = [
+        {'id': s.id, 'name': s.name}
+        for s in available
     ]
 
-    return JsonResponse({'staff': staff_data})
+    return JsonResponse({'staff': data})
+
 # salon/views.py
 @login_required
 @user_passes_test(is_admin)

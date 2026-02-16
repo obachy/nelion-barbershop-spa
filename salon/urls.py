@@ -59,5 +59,7 @@ urlpatterns = [
     path('appointments/complete/<int:appointment_id>/',
      complete_appointment,
      name='complete_appointment'),
+    path('book/', client_booking, name='client_booking'),
+    path('ajax/available-staff/', ajax_available_staff, name='ajax_available_staff'),
 
 ]
