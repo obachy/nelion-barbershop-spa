@@ -1,1 +1,1 @@
-web: gunicorn salon_system.wsgi
+web: gunicorn salon_system.wsgi:application

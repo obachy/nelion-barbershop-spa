@@ -27,7 +27,7 @@ SECRET_KEY = 'django-insecure-l@kt&^-)d$o)0q*f@_8w#_mbuwg!6@(e#m@jl2wq#ukt5d&b(w
 DEBUG = True
 
 ALLOWED_HOSTS = [
-    ".onrender.com",
+    "salon-management-ezch.onrender.com",
     "localhost",
     "127.0.0.1",
 ]
