@@ -1,4 +1,3 @@
-from datetime import datetime
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.views import LoginView
@@ -10,7 +9,7 @@ from datetime import date, time, timedelta
 from django.views.decorators.csrf import csrf_protect
 from django.db.models import Count, Sum, F, DecimalField, ExpressionWrapper, Q, Value
 from django.db.models.functions import Coalesce, Cast
-from datetime import datetime
+from datetime import date, time, datetime, timedelta
 from django.contrib import messages
 from decimal import Decimal
 from .models import (
@@ -20,6 +19,7 @@ from .models import (
     Appointment,
     StaffAttendance,
     StaffPenalty,
+    Appointment,
 )
 
 from .forms import (
@@ -257,9 +257,9 @@ def delete_service(request, service_id):
 # STAFF ATTENDANCE
 # ======================
 
-OFFICIAL_START_TIME = time(9, 0)
+OFFICIAL_START_TIME = time(8, 30)
 GRACE_PERIOD_MINUTES = 10
-LATE_PENALTY_AMOUNT = 200
+LATE_PENALTY_AMOUNT = 50
 
 @login_required
 def staff_attendance_list(request):
@@ -287,14 +287,32 @@ def staff_check_in(request, staff_id):
     today = timezone.localdate()
     now_time = timezone.localtime().time()
 
-    StaffAttendance.objects.get_or_create(
+    attendance, created = StaffAttendance.objects.get_or_create(
         staff=staff,
         date=today,
-        defaults={'check_in': now_time}
+        defaults={
+            'check_in': now_time
+        }
     )
 
-    return redirect('staff_attendance')
+    if created:
+        late_limit = OFFICIAL_START_TIME
 
+        if now_time > late_limit:
+            attendance.is_late = True
+            attendance.save()
+
+            StaffPenalty.objects.get_or_create(
+                staff=staff,
+                attendance=attendance,
+                defaults={
+                    'amount': LATE_PENALTY_AMOUNT,
+                    'reason': 'Late arrival after 8:30 AM',
+                }
+            )
+
+    return redirect('staff_attendance')
+   
 @login_required
 def staff_check_out(request, attendance_id):
     attendance = get_object_or_404(StaffAttendance, id=attendance_id)
@@ -379,59 +397,53 @@ def ajax_available_staff(request):
 
 # salon/views.py
 @login_required
-@user_passes_test(is_admin)
 def staff_commission_report(request):
+    today = date.today()
 
-    selected_month = request.GET.get('month')
-    selected_year = request.GET.get('year')
+    selected_month = int(request.GET.get('month', today.month))
+    selected_year = int(request.GET.get('year', today.year))
 
-    # default month/year
-    if not selected_month:
-        selected_month = date.today().month
-    if not selected_year:
-        selected_year = date.today().year
+    staff_data = []
 
-    appointments = Appointment.objects.filter(
-        status='Completed',
-        date__month=selected_month,
-        date__year=selected_year
-    )
+    for staff in Staff.objects.all():
+        completed_appointments = Appointment.objects.filter(
+            staff=staff,
+            status='Completed',
+            date__month=selected_month,
+            date__year=selected_year
+        ).select_related('service')
 
-    report = (
-        Staff.objects
-        .annotate(
-            completed_jobs=Count(
-                'appointment',
-                filter=Q(
-                    appointment__status='Completed',
-                    appointment__date__month=selected_month,
-                    appointment__date__year=selected_year
-                )
-            ),
-            total_sales=Coalesce(
-                Sum(
-                    'appointment__service__price',
-                    filter=Q(
-                        appointment__status='Completed',
-                        appointment__date__month=selected_month,
-                        appointment__date__year=selected_year
-                    )
-                ),
-                0,
-                output_field=DecimalField()
-            )
+        completed_jobs = completed_appointments.count()
+
+        total_sales = sum(
+            Decimal(str(appointment.service.price or 0))
+            for appointment in completed_appointments
         )
-    )
 
-    return render(request, 'staff_commission.html', {
-        'report': report,
+        commission_earned = sum(
+            Decimal(str(appointment.service.commission_amount or 0))
+            if Decimal(str(appointment.service.commission_amount or 0)) > 0
+            else (
+                Decimal(str(appointment.service.price or 0)) *
+                Decimal(str(appointment.service.commission_percent or 0))
+            ) / Decimal('100')
+            for appointment in completed_appointments
+)
+
+        staff_data.append({
+            'staff': staff.name,
+            'jobs': completed_jobs,
+            'sales': total_sales,
+            'commission_rate': 'Percent + Amount',
+            'commission_earned': commission_earned,
+        })
+
+    return render(request, 'commission/staff_commission.html', {
+        'staff_data': staff_data,
         'selected_month': selected_month,
         'selected_year': selected_year,
     })
 
-
-from decimal import Decimal
-from django.contrib import messages
 
 @login_required
 def complete_appointment(request, appointment_id):
@@ -457,3 +469,142 @@ def complete_appointment(request, appointment_id):
     )
 
     return redirect('/appointments/')
+
+@login_required
+def walk_in_customer(request):
+    if request.method == 'POST':
+        name = request.POST.get('name')
+        phone = request.POST.get('phone')
+        service_id = request.POST.get('service')
+        staff_id = request.POST.get('staff')
+
+        client, created = Client.objects.get_or_create(
+            phone=phone,
+            defaults={
+                'name': name,
+                'email': ''
+            }
+        )
+
+        Appointment.objects.create(
+            client=client,
+            service_id=service_id,
+            staff_id=staff_id,
+            date=date.today(),
+            time=timezone.localtime().time(),
+            status='Pending'
+        )
+
+        return redirect('/appointments/')
+
+    services = Service.objects.all()
+    staff = Staff.objects.all()
+
+    return render(request, 'walk_in.html', {
+        'services': services,
+        'staff': staff
+    })
+@login_required
+def add_service(request):
+    staff_list = Staff.objects.all()
+
+    if request.method == 'POST':
+        name = request.POST.get('name')
+        price = Decimal(str(request.POST.get('price') or 0))
+        duration = request.POST.get('duration') or 0
+        commission_percent = Decimal(str(request.POST.get('commission_percent') or 0))
+        commission_amount = Decimal(str(request.POST.get('commission_amount') or 0))
+        staff_ids = request.POST.getlist('staff')
+
+        if commission_amount == 0 and commission_percent > 0:
+            commission_amount = (price * commission_percent) / Decimal('100')
+
+        service = Service.objects.create(
+            name=name,
+            price=price,
+            duration=duration,
+            commission_percent=commission_percent,
+            commission_amount=commission_amount
+        )
+
+        service.staff.set(staff_ids)
+
+        return redirect('/services/')
+
+    return render(request, 'add_service.html', {
+        'staff_list': staff_list
+    })
+@login_required
+def staff_work_history(request):
+    today = date.today()
+
+    selected_month = int(request.GET.get('month', today.month))
+    selected_year = int(request.GET.get('year', today.year))
+
+    staff_reports = []
+
+    staff_list = Staff.objects.all().order_by('name')
+
+    for staff in staff_list:
+        completed_appointments = Appointment.objects.filter(
+            staff=staff,
+            status='Completed',
+            date__month=selected_month,
+            date__year=selected_year
+        ).select_related('client', 'service').order_by('date', 'time')
+
+        work_items = []
+        daily_totals = {}
+
+        month_total_sales = Decimal('0')
+        month_total_commission = Decimal('0')
+
+        for appointment in completed_appointments:
+            service_price = Decimal(str(appointment.service.price or 0))
+            commission_percent = Decimal(str(appointment.service.commission_percent or 0))
+            commission_amount = Decimal(str(appointment.service.commission_amount or 0))
+
+            # If fixed commission amount is not set, calculate from percentage
+            if commission_amount == 0 and commission_percent > 0:
+                commission_amount = (service_price * commission_percent) / Decimal('100')
+
+            work_items.append({
+                'date': appointment.date,
+                'time': appointment.time,
+                'client': appointment.client.name,
+                'service': appointment.service.name,
+                'sales': service_price,
+                'commission_percent': commission_percent,
+                'commission_amount': commission_amount,
+            })
+
+            day_key = appointment.date
+
+            if day_key not in daily_totals:
+                daily_totals[day_key] = {
+                    'jobs': 0,
+                    'sales': Decimal('0'),
+                    'commission': Decimal('0'),
+                }
+
+            daily_totals[day_key]['jobs'] += 1
+            daily_totals[day_key]['sales'] += service_price
+            daily_totals[day_key]['commission'] += commission_amount
+
+            month_total_sales += service_price
+            month_total_commission += commission_amount
+
+        staff_reports.append({
+            'staff': staff,
+            'work_items': work_items,
+            'daily_totals': daily_totals,
+            'month_jobs': completed_appointments.count(),
+            'month_total_sales': month_total_sales,
+            'month_total_commission': month_total_commission,
+        })
+
+    return render(request, 'staff_work_history.html', {
+        'staff_reports': staff_reports,
+        'selected_month': selected_month,
+        'selected_year': selected_year,
+    })

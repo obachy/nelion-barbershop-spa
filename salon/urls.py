@@ -22,6 +22,9 @@ from .views import (
     staff_check_in,          # 👈 AND THIS
     staff_check_out,
     complete_appointment,
+    walk_in_customer,
+    add_service,
+    staff_work_history,
 )
 
 urlpatterns = [
@@ -61,5 +64,7 @@ urlpatterns = [
      name='complete_appointment'),
     path('book/', client_booking, name='client_booking'),
     path('ajax/available-staff/', ajax_available_staff, name='ajax_available_staff'),
-
+    path('walk-in/', walk_in_customer, name='walk_in_customer'),
+    path('add-service/', add_service, name='add_service'),
+    path('staff/work-history/', staff_work_history, name='staff_work_history'),
 ]

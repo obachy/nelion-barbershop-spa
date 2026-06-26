@@ -27,6 +27,8 @@
                       <th>Price</th>
                       <th>Duration</th>
                       <th>Actions</th>
+                      <th>Commission %</th>
+                      <th>Commission Amount</th>
              </tr>
            </thead>
 
@@ -41,7 +43,13 @@
     <td>{{ service.name }}</td>
     <td>KES {{ service.price }}</td>
     <td>{{ service.duration }} mins</td>
+    <td>{{ service.commission_percent }}%</td>
+    <td>KES {{ service.commission_amount }}</td>
     <td>
+        <a href="/add-service/" class="btn btn-success mb-3">
+            + Add Service
+        </a>
+
         <a href="/services/edit/{{ service.id }}/"
            class="btn btn-sm btn-warning">
            Edit

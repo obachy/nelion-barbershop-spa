@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Staff Work History</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+        body {
+            background: #f4f6f9;
+        }
+
+        .top-bar {
+            background: #111827;
+            border-radius: 0 0 22px 22px;
+        }
+
+        .report-card {
+            border: none;
+            border-radius: 22px;
+        }
+
+        .summary-box {
+            background: #f9fafb;
+            border-radius: 16px;
+            padding: 15px;
+        }
+
+        .section-title {
+            font-size: 13px;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            font-weight: 700;
+        }
+
+        .table th {
+            white-space: nowrap;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="top-bar text-white py-4 mb-4">
+    <div class="container d-flex justify-content-between align-items-center">
+        <div>
+            <h3 class="mb-0 fw-bold">Staff Work History</h3>
+            <small class="text-white-50">Daily work done, commission earned and monthly totals</small>
+        </div>
+
+        <a href="/" class="btn btn-outline-light rounded-pill px-4">Dashboard</a>
+    </div>
+</div>
+
+<div class="container mb-5">
+
+    <div class="card report-card shadow-sm mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-2 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Month</label>
+                    <input type="number" name="month" min="1" max="12" value="{{ selected_month }}" class="form-control">
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Year</label>
+                    <input type="number" name="year" value="{{ selected_year }}" class="form-control">
+                </div>
+
+                <div class="col-md-4">
+                    <button class="btn btn-dark w-100 rounded-pill">Filter Report</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% for report in staff_reports %}
+    <div class="card report-card shadow-sm mb-4">
+        <div class="card-body p-4">
+
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h4 class="fw-bold mb-0">{{ report.staff.name }}</h4>
+                    <small class="text-muted">Monthly work and commission summary</small>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-4">
+                <div class="col-md-4">
+                    <div class="summary-box">
+                        <small class="text-muted">Month Jobs</small>
+                        <h4 class="mb-0">{{ report.month_jobs }}</h4>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="summary-box">
+                        <small class="text-muted">Month Sales</small>
+                        <h4 class="mb-0">KES {{ report.month_total_sales }}</h4>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="summary-box">
+                        <small class="text-muted">Month Commission</small>
+                        <h4 class="mb-0 text-success">KES {{ report.month_total_commission }}</h4>
+                    </div>
+                </div>
+            </div>
+
+            <p class="section-title">Work Done</p>
+
+            <div class="table-responsive mb-4">
+                <table class="table table-striped align-middle">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Date</th>
+                            <th>Time</th>
+                            <th>Customer</th>
+                            <th>Service</th>
+                            <th>Sales</th>
+                            <th>Commission %</th>
+                            <th>Commission Amount</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for item in report.work_items %}
+                        <tr>
+                            <td>{{ item.date }}</td>
+                            <td>{{ item.time }}</td>
+                            <td>{{ item.client }}</td>
+                            <td>{{ item.service }}</td>
+                            <td>KES {{ item.sales }}</td>
+                            <td>{{ item.commission_percent }}%</td>
+                            <td class="fw-bold text-success">KES {{ item.commission_amount }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted">
+                                No completed work for this month.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <p class="section-title">Daily Totals</p>
+
+            <div class="table-responsive">
+                <table class="table table-bordered align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Date</th>
+                            <th>Jobs</th>
+                            <th>Total Sales</th>
+                            <th>Total Commission</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for day, total in report.daily_totals.items %}
+                        <tr>
+                            <td>{{ day }}</td>
+                            <td>{{ total.jobs }}</td>
+                            <td>KES {{ total.sales }}</td>
+                            <td class="fw-bold text-success">KES {{ total.commission }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center text-muted">
+                                No daily totals available.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+    </div>
+    {% endfor %}
+
+</div>
+
+</body>
+</html>

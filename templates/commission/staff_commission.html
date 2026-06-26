@@ -30,9 +30,9 @@
                     <tr>
                         <th>Staff</th>
                         <th>Completed Jobs</th>
-                        <th>Total Sales (KES)</th>
+                        <th>Total Sales</th>
                         <th>Commission %</th>
-                        <th>Commission Earned (KES)</th>
+                        <th>Commission Earned</th>
                     </tr>
                 </thead>
 
@@ -42,10 +42,10 @@
                         <td>{{ row.staff }}</td>
                         <td>{{ row.jobs }}</td>
                         <td>KES {{ row.sales }}</td>
-                        <td>{{ row.commission|floatformat:0 }}%</td>
+                        <td>{{ row.commission_rate }}%</td>
                         <td>
                             <strong class="text-success">
-                                KES {{ row.commission }}
+                                KES {{ row.commission_earned }}
                             </strong>
                         </td>
                     </tr>
