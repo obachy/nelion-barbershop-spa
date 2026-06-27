@@ -9,12 +9,11 @@
 
     <style>
         body {
-            background: #f4f6f9;
+            background: #424243;
         }
-
-        .sidebar {
-            min-height: 100vh;
-            background: #111827;
+        
+        .sidebar h4 {
+            font-weight: 700;
         }
 
         .sidebar a {
@@ -24,6 +23,7 @@
             padding: 12px 18px;
             border-radius: 10px;
             margin-bottom: 6px;
+            font-size: 15px;
         }
 
         .sidebar a:hover {
@@ -52,6 +52,54 @@
                 min-height: auto;
             }
         }
+
+        .analytics-section {
+            margin-top: 28px;
+        }
+
+        .analytics-title {
+            font-weight: 800;
+            margin-bottom: 4px;
+        }
+
+        .analytics-subtitle {
+            color: #6b7280;
+            font-size: 14px;
+        }
+
+        .analytics-card {
+            border: none;
+            border-radius: 22px;
+            overflow: hidden;
+        }
+
+        .analytics-card .card-body {
+            padding: 24px;
+        }
+
+        .analytics-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 14px;
+            background: #f3f4f6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        .chart-box {
+            height: 360px;
+        }
+
+        .chart-box-wide {
+    height: 390px;
+}
+
+
+
+
+
     </style>
 </head>
 
@@ -65,19 +113,17 @@
             <h4 class="text-white mb-4">Salon System</h4>
 
             <a href="/">🏠 Dashboard</a>
+            <a href="/walk-in/">🚶 Walk-in Customer</a>
+            <a href="/add-service/">💇 Add Service</a>
             <a href="/appointments/">📅 Appointments</a>
             <a href="/clients/">👥 Clients</a>
-            <a href="/services/">💇 Services</a>
-
+            <a href="/services/">💼 Services</a>
+            
             {% if is_admin %}
             <a href="/staff/">👩‍💼 Staff</a>
             <a href="/staff/attendance/">🕒 Attendance</a>
             <a href="/staff/commission/">💰 Commission</a>
-            <a href="/walk-in/" class="btn btn-success w-100 mb-2">
-                + Walk-in Customer
-            <a href="/add-service/" class="btn btn-success w-100 mb-2">
-                + Add Service    
-            </a>
+            <a href="/staff/work-history/">📊 Work History</a>
             {% endif %}
 
             <a href="/logout/">🚪 Logout</a>
@@ -160,6 +206,36 @@
                         </div>
                     </div>
                 </div>
+
+            </div>
+
+            <div class="row g-4 mt-3">
+
+                <div class="col-md-6">
+                    <div class="card shadow-sm border-0 rounded-4">
+                        <div class="card-body">
+                            <h6 class="fw-bold">Staff Attendance This Month</h6>
+                            <small class="text-muted">Number of days each staff checked in</small>
+
+                            <div class="chart-box mt-3">
+                                 <canvas id="staffAttendanceChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="card shadow-sm border-0 rounded-4">
+                        <div class="card-body">
+                            <h6 class="fw-bold">Staff Total Commission This Month</h6>
+                            <small class="text-muted">Total commission earned from completed work</small>
+
+                            <div class="chart-box mt-3">
+                                <canvas id="staffCommissionChart"></canvas>
+                        </div>
+                     </div>
+                    </div>
+                 </div>
 
             </div>
 
@@ -322,6 +398,71 @@
         },
         options: {
             responsive: true,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+</script>
+
+<script>
+    const attendanceLabels = {{ attendance_labels|safe }};
+    const attendanceDays = {{ attendance_days|safe }};
+
+    const commissionLabels = {{ commission_labels|safe }};
+    const commissionTotals = {{ commission_totals|safe }};
+
+    new Chart(document.getElementById('staffAttendanceChart'), {
+        type: 'bar',
+        data: {
+            labels: attendanceLabels,
+            datasets: [{
+                label: 'Attendance Days',
+                data: attendanceDays,
+                borderWidth: 1,
+                borderRadius: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        precision: 0
+                    }
+                }
+            }
+        }
+    });
+
+    new Chart(document.getElementById('staffCommissionChart'), {
+        type: 'bar',
+        data: {
+            labels: commissionLabels,
+            datasets: [{
+                label: 'Commission KES',
+                data: commissionTotals,
+                borderWidth: 1,
+                borderRadius: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
             plugins: {
                 legend: {
                     display: false

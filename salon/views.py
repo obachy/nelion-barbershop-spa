@@ -125,6 +125,52 @@ def dashboard(request):
         monthly_labels.append(date(today.year, month, 1).strftime('%b'))
         monthly_sales.append(float(total))
 
+            # Staff attendance this month
+    attendance_data = []
+
+    for staff_member in Staff.objects.all().order_by('name'):
+        present_days = StaffAttendance.objects.filter(
+            staff=staff_member,
+            date__month=today.month,
+            date__year=today.year
+        ).count()
+
+        attendance_data.append({
+            'staff': staff_member.name,
+            'days': present_days,
+        })
+
+    attendance_labels = [item['staff'] for item in attendance_data]
+    attendance_days = [item['days'] for item in attendance_data]
+
+
+    # Staff commission this month
+    commission_labels = []
+    commission_totals = []
+
+    for staff_member in Staff.objects.all().order_by('name'):
+        completed_appointments = Appointment.objects.filter(
+            staff=staff_member,
+            status='Completed',
+            date__month=today.month,
+            date__year=today.year
+        ).select_related('service')
+
+        total_commission = Decimal('0')
+
+        for appointment in completed_appointments:
+            service_price = Decimal(str(appointment.service.price or 0))
+            commission_percent = Decimal(str(appointment.service.commission_percent or 0))
+            commission_amount = Decimal(str(appointment.service.commission_amount or 0))
+
+            if commission_amount == 0 and commission_percent > 0:
+                commission_amount = (service_price * commission_percent) / Decimal('100')
+
+            total_commission += commission_amount
+
+        commission_labels.append(staff_member.name)
+        commission_totals.append(float(total_commission))
+
     context = {
         'clients': Client.objects.count(),
         'staff': Staff.objects.count(),
@@ -140,6 +186,12 @@ def dashboard(request):
 
         'monthly_labels': json.dumps(monthly_labels, cls=DjangoJSONEncoder),
         'monthly_sales': json.dumps(monthly_sales, cls=DjangoJSONEncoder),
+
+                'attendance_labels': json.dumps(attendance_labels, cls=DjangoJSONEncoder),
+        'attendance_days': json.dumps(attendance_days, cls=DjangoJSONEncoder),
+
+        'commission_labels': json.dumps(commission_labels, cls=DjangoJSONEncoder),
+        'commission_totals': json.dumps(commission_totals, cls=DjangoJSONEncoder),
 
         'is_admin': is_admin(request.user),
         'is_staff': is_staff(request.user),
