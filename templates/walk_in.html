@@ -96,6 +96,15 @@
                                 {% endfor %}
                             </select>
                         </div>
+                         
+                        <div class="mb-3">
+                            <label class="form-label">Payment Method</label>
+                            <select name="payment_method" class="form-select" required>
+                                <option value="Cash">Cash</option>
+                                <option value="M-Pesa">M-Pesa</option>
+                                <option value="Bank">Bank</option>
+                            </select>
+                        </div>
 
                         <div class="alert alert-info rounded-4">
                             This will create an appointment for today automatically.

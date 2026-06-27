@@ -40,6 +40,7 @@
                         <th>Date</th>
                         <th>Time</th>
                         <th>Status</th>
+                        <th>Payment</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -52,6 +53,8 @@
                         <td>{{ a.staff }}</td>
                         <td>{{ a.date }}</td>
                         <td>{{ a.time }}</td>
+                        <td>{{ a.client.name }}</td>
+                        <td>{{ a.payment_method }}</td>
                         <td>
                             <span class="badge
                                 {% if a.status == 'Completed' %} bg-success

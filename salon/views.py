@@ -12,6 +12,8 @@ from django.db.models.functions import Coalesce, Cast
 from datetime import date, time, datetime, timedelta
 from django.contrib import messages
 from decimal import Decimal
+import json
+from django.core.serializers.json import DjangoJSONEncoder
 from .models import (
     Client,
     Staff,
@@ -20,6 +22,7 @@ from .models import (
     StaffAttendance,
     StaffPenalty,
     Appointment,
+
 )
 
 from .forms import (
@@ -62,16 +65,65 @@ class RoleBasedLoginView(LoginView):
 # ======================
 
 @login_required
-@user_passes_test(is_admin)
 def dashboard(request):
     today = date.today()
 
     todays_revenue = Appointment.objects.filter(
         date=today,
         status='Completed'
-    ).aggregate(
-        total=Sum('service__price')
-    )['total'] or 0
+    ).aggregate(total=Sum('service__price'))['total'] or 0
+
+    # Staff performance this month
+    staff_performance = (
+        Appointment.objects.filter(
+            status='Completed',
+            date__month=today.month,
+            date__year=today.year
+        )
+        .values('staff__name')
+        .annotate(total_jobs=Count('id'))
+        .order_by('-total_jobs')
+    )
+
+    staff_labels = []
+    staff_jobs = []
+
+    for item in staff_performance:
+        staff_labels.append(item['staff__name'] or 'Unknown')
+        staff_jobs.append(item['total_jobs'])
+
+    # Income per day this month
+    daily_income = (
+        Appointment.objects.filter(
+            status='Completed',
+            date__month=today.month,
+            date__year=today.year
+        )
+        .values('date')
+        .annotate(total_income=Sum('service__price'))
+        .order_by('date')
+    )
+
+    daily_labels = []
+    daily_sales = []
+
+    for item in daily_income:
+        daily_labels.append(item['date'].strftime('%d %b'))
+        daily_sales.append(float(item['total_income'] or 0))
+
+    # Income per month this year
+    monthly_labels = []
+    monthly_sales = []
+
+    for month in range(1, 13):
+        total = Appointment.objects.filter(
+            status='Completed',
+            date__month=month,
+            date__year=today.year
+        ).aggregate(total=Sum('service__price'))['total'] or 0
+
+        monthly_labels.append(date(today.year, month, 1).strftime('%b'))
+        monthly_sales.append(float(total))
 
     context = {
         'clients': Client.objects.count(),
@@ -79,70 +131,21 @@ def dashboard(request):
         'services': Service.objects.count(),
         'appointments': Appointment.objects.count(),
         'todays_revenue': todays_revenue,
+
+        'staff_labels': json.dumps(staff_labels, cls=DjangoJSONEncoder),
+        'staff_jobs': json.dumps(staff_jobs, cls=DjangoJSONEncoder),
+
+        'daily_labels': json.dumps(daily_labels, cls=DjangoJSONEncoder),
+        'daily_sales': json.dumps(daily_sales, cls=DjangoJSONEncoder),
+
+        'monthly_labels': json.dumps(monthly_labels, cls=DjangoJSONEncoder),
+        'monthly_sales': json.dumps(monthly_sales, cls=DjangoJSONEncoder),
+
         'is_admin': is_admin(request.user),
+        'is_staff': is_staff(request.user),
     }
 
     return render(request, 'dashboard.html', context)
-
-# ======================
-# APPOINTMENTS
-# ======================
-
-@login_required
-@user_passes_test(is_admin_or_staff)
-def appointments_list(request):
-    appointments = Appointment.objects.all()
-
-    return render(request, 'appointments.html', {
-        'appointments': appointments,
-        'is_admin': request.user.groups.filter(name='Admin').exists(),
-    })
-
-@login_required
-@user_passes_test(is_admin_or_staff)
-def edit_appointment(request, appointment_id):
-    appointment = get_object_or_404(Appointment, id=appointment_id)
-
-    if request.method == 'POST':
-        form = AppointmentForm(request.POST, instance=appointment)
-        if form.is_valid():
-            form.save()
-            return redirect('/appointments/')
-    else:
-        form = AppointmentForm(instance=appointment)
-
-    return render(request, 'add_form.html', {
-        'form': form,
-        'title': 'Edit Appointment'
-    })
-
-@login_required
-@user_passes_test(is_admin_or_staff)
-def book_appointment(request):
-    if request.method == 'POST':
-        form = AppointmentForm(request.POST)
-        if form.is_valid():
-            appointment = form.save(commit=False)
-            appointment.status = 'Pending'
-            appointment.save()
-            return redirect('/appointments/')
-    else:
-        form = AppointmentForm()
-
-    return render(request, 'book_appointment.html', {'form': form})
-
-@login_required
-@user_passes_test(is_admin_or_staff)
-def update_appointment_status(request, appointment_id):
-    appointment = get_object_or_404(Appointment, id=appointment_id)
-
-    if request.method == 'POST':
-        status = request.POST.get('status')
-        if status in ['Pending', 'Completed', 'Cancelled']:
-            appointment.status = status
-            appointment.save()
-
-    return redirect('/appointments/')
 
 @login_required
 @user_passes_test(is_admin)
@@ -477,6 +480,7 @@ def walk_in_customer(request):
         phone = request.POST.get('phone')
         service_id = request.POST.get('service')
         staff_id = request.POST.get('staff')
+        payment_method = request.POST.get('payment_method') or 'Cash'
 
         client, created = Client.objects.get_or_create(
             phone=phone,
@@ -492,7 +496,9 @@ def walk_in_customer(request):
             staff_id=staff_id,
             date=date.today(),
             time=timezone.localtime().time(),
+            payment_method=payment_method,
             status='Pending'
+            
         )
 
         return redirect('/appointments/')
@@ -608,3 +614,104 @@ def staff_work_history(request):
         'selected_month': selected_month,
         'selected_year': selected_year,
     })
+
+@login_required
+def book_appointment(request):
+    if request.method == 'POST':
+        client_id = request.POST.get('client')
+        service_id = request.POST.get('service')
+        staff_id = request.POST.get('staff')
+        appointment_date = request.POST.get('date')
+        appointment_time = request.POST.get('time')
+        payment_method = request.POST.get('payment_method') or 'Cash'
+
+        Appointment.objects.create(
+            client_id=client_id,
+            service_id=service_id,
+            staff_id=staff_id,
+            date=appointment_date,
+            time=appointment_time,
+            payment_method=payment_method,
+            status='Pending'  
+        )
+
+        return redirect('/appointments/')
+
+    clients = Client.objects.all()
+    services = Service.objects.all()
+    staff = Staff.objects.all()
+
+    return render(request, 'book_appointment.html', {
+        'clients': clients,
+        'services': services,
+        'staff': staff,
+    })
+
+@login_required
+def update_appointment_status(request, appointment_id):
+    appointment = get_object_or_404(Appointment, id=appointment_id)
+
+    if request.method == 'POST':
+        new_status = request.POST.get('status')
+
+        if new_status in ['Pending', 'Completed', 'Cancelled']:
+            appointment.status = new_status
+            appointment.save()
+
+    return redirect('/appointments/')
+
+def is_admin(user):
+    return user.is_authenticated and (
+        user.is_superuser or user.groups.filter(name='Admin').exists()
+    )
+
+def is_staff(user):
+    return user.is_authenticated and user.groups.filter(name='Staff').exists()
+
+@login_required
+def appointments_list(request):
+    appointments = Appointment.objects.select_related(
+        'client',
+        'staff',
+        'service'
+    ).order_by('-date', '-time')
+
+    return render(request, 'appointments.html', {
+        'appointments': appointments,
+        'is_admin': is_admin(request.user),
+        'is_staff': is_staff(request.user),
+    })
+
+@login_required
+def edit_appointment(request, appointment_id):
+    appointment = get_object_or_404(Appointment, id=appointment_id)
+
+    if request.method == 'POST':
+        appointment.client_id = request.POST.get('client')
+        appointment.service_id = request.POST.get('service')
+        appointment.staff_id = request.POST.get('staff')
+        appointment.date = request.POST.get('date')
+        appointment.time = request.POST.get('time')
+        appointment.status = request.POST.get('status')
+        appointment.payment_method = request.POST.get('payment_method') or 'Cash'
+        appointment.save()
+
+        return redirect('/appointments/')
+
+    clients = Client.objects.all()
+    services = Service.objects.all()
+    staff = Staff.objects.all()
+
+    return render(request, 'edit_appointment.html', {
+        'appointment': appointment,
+        'clients': clients,
+        'services': services,
+        'staff': staff,
+    })
+
+
+@login_required
+def delete_appointment(request, appointment_id):
+    appointment = get_object_or_404(Appointment, id=appointment_id)
+    appointment.delete()
+    return redirect('/appointments/')

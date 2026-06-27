@@ -6,65 +6,55 @@ from .views import (
     clients_list,
     staff_list,
     services_list,
-    edit_service,
-    delete_service,
     appointments_list,
     edit_appointment,
     delete_appointment,
     add_client,
     add_staff,
     add_service,
+    edit_service,
+    delete_service,
     edit_client,
     client_booking,
     ajax_available_staff,
     staff_commission_report,
-    staff_attendance_list,   # 👈 ADD THIS
-    staff_check_in,          # 👈 AND THIS
+    staff_attendance_list,
+    staff_check_in,
     staff_check_out,
     complete_appointment,
     walk_in_customer,
-    add_service,
     staff_work_history,
 )
 
 urlpatterns = [
-    # Dashboard
     path('', dashboard, name='dashboard'),
 
-    # Appointments
     path('book-appointment/', book_appointment, name='book_appointment'),
+    path('book/', client_booking, name='client_booking'),
+
     path('appointments/', appointments_list, name='appointments'),
     path('appointments/edit/<int:appointment_id>/', edit_appointment, name='edit_appointment'),
     path('appointments/delete/<int:appointment_id>/', delete_appointment, name='delete_appointment'),
-   # path('update-status/<int:appointment_id>/', update_appointment_status, name='update_status'),
-    path('client-booking/', client_booking, name='client_booking'),
+    path('appointments/complete/<int:appointment_id>/', complete_appointment, name='complete_appointment'),
+    path('update-status/<int:appointment_id>/', update_appointment_status, name='update_status'),
 
-    # Clients
     path('clients/', clients_list, name='clients'),
     path('add-client/', add_client, name='add_client'),
+    path('clients/edit/<int:client_id>/', edit_client, name='edit_client'),
 
-    # Staff
     path('staff/', staff_list, name='staff'),
     path('add-staff/', add_staff, name='add_staff'),
-
-    # Services
-    path('services/', services_list, name='services'),
-    path('add-service/', add_service, name='add_service'),
-    path('services/edit/<int:service_id>/', edit_service, name='edit_service'),
-    path('services/delete/<int:service_id>/', delete_service, name='delete_service'),
-    path('clients/edit/<int:client_id>/', edit_client, name='edit_client'),
-    path('ajax/available-staff/', ajax_available_staff, name='ajax_available_staff'),
     path('staff/commission/', staff_commission_report, name='staff_commission'),
     path('staff/attendance/', staff_attendance_list, name='staff_attendance'),
     path('staff/check-in/<int:staff_id>/', staff_check_in, name='staff_check_in'),
     path('staff/check-out/<int:attendance_id>/', staff_check_out, name='staff_check_out'),
-    path('staff/commission/', staff_commission_report, name='staff_commission'),
-    path('appointments/complete/<int:appointment_id>/',
-     complete_appointment,
-     name='complete_appointment'),
-    path('book/', client_booking, name='client_booking'),
+    path('staff/work-history/', staff_work_history, name='staff_work_history'),
+
+    path('services/', services_list, name='services'),
+    path('add-service/', add_service, name='add_service'),
+    path('services/edit/<int:service_id>/', edit_service, name='edit_service'),
+    path('services/delete/<int:service_id>/', delete_service, name='delete_service'),
+
     path('ajax/available-staff/', ajax_available_staff, name='ajax_available_staff'),
     path('walk-in/', walk_in_customer, name='walk_in_customer'),
-    path('add-service/', add_service, name='add_service'),
-    path('staff/work-history/', staff_work_history, name='staff_work_history'),
 ]

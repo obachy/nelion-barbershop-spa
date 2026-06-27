@@ -55,6 +55,23 @@ class Appointment(models.Model):
         ('Cancelled', 'Cancelled'),
     ]
 
+    PAYMENT_METHOD_CHOICES = [
+        ('Cash', 'Cash'),
+        ('M-Pesa', 'M-Pesa'),
+        ('Bank', 'Bank'),
+    ]
+
+    client = models.ForeignKey(Client, on_delete=models.CASCADE)
+    staff = models.ForeignKey(Staff, on_delete=models.CASCADE)
+    service = models.ForeignKey(Service, on_delete=models.CASCADE)
+    date = models.DateField()
+    time = models.TimeField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending')
+    payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD_CHOICES, default='Cash')
+
+    def __str__(self):
+        return f"{self.client.name} - {self.service.name}"
+
     client = models.ForeignKey(Client, on_delete=models.CASCADE)
     staff = models.ForeignKey(Staff, on_delete=models.CASCADE)
     service = models.ForeignKey(Service, on_delete=models.CASCADE)
