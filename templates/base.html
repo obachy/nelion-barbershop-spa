@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{% block title %}Salon System{% endblock %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        body {
+            background: #f4f6f9;
+            font-family: Arial, sans-serif;
+        }
+
+        .sidebar {
+            min-height: 100vh;
+            background: #111827;
+        }
+
+        .sidebar a {
+            color: #d1d5db;
+            text-decoration: none;
+            display: block;
+            padding: 12px 18px;
+            border-radius: 10px;
+            margin-bottom: 6px;
+            font-size: 15px;
+        }
+
+        .sidebar a:hover {
+            background: #1f2937;
+            color: white;
+        }
+
+        .main-content {
+            padding: 28px;
+        }
+
+        .stat-card,
+        .chart-card,
+        .action-card {
+            border: none;
+            border-radius: 18px;
+        }
+
+        .stat-icon,
+        .chart-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .stat-icon {
+            background: rgba(255,255,255,0.25);
+            font-size: 22px;
+        }
+
+        .chart-icon {
+            background: #f3f4f6;
+            font-size: 19px;
+        }
+
+        .chart-box {
+            height: 220px;
+        }
+
+        .chart-box-small {
+            height: 200px;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                min-height: auto;
+            }
+
+            .main-content {
+                padding: 18px;
+            }
+        }
+    </style>
+
+    {% block extra_css %}{% endblock %}
+</head>
+
+<body>
+
+<div class="container-fluid">
+    <div class="row">
+
+        <div class="col-md-3 col-lg-2 sidebar p-3">
+            <h4 class="text-white mb-4">Salon System</h4>
+
+            <a href="/">🏠 Dashboard</a>
+            <a href="/walk-in/">🚶 Walk-in Customer</a>
+            <a href="/add-service/">💇 Add Service</a>
+            <a href="/appointments/">📅 Appointments</a>
+            <a href="/clients/">👥 Clients</a>
+            <a href="/services/">💼 Services</a>
+
+            {% if is_admin %}
+                <a href="/staff/">👩‍💼 Staff</a>
+                <a href="/staff/attendance/">🕒 Attendance</a>
+                <a href="/staff/commission/">💰 Commission</a>
+                <a href="/staff/work-history/">📊 Work History</a>
+            {% endif %}
+
+            <a href="/logout/">🚪 Logout</a>
+        </div>
+
+        <div class="col-md-9 col-lg-10 main-content">
+            {% block content %}{% endblock %}
+        </div>
+
+    </div>
+</div>
+
+{% block extra_js %}{% endblock %}
+
+</body>
+</html>
