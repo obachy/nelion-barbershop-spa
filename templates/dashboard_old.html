@@ -1,0 +1,352 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Salon System{% endblock %}
+
+{% block content %}
+
+<!-- Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h3 class="fw-bold mb-0">Dashboard</h3>
+        <small class="text-muted">Salon overview, performance and quick actions</small>
+    </div>
+
+    <a href="/walk-in/" class="btn btn-dark rounded-pill px-4 w-100 w-md-auto"></a>
+        + Walk-in Customer
+    </a>
+</div>
+
+<!-- Summary Cards -->
+<div class="row g-4 mb-4">
+
+    <div class="col-md-6 col-lg-3">
+        <div class="card stat-card shadow-sm bg-primary text-white">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4"></div>
+                <div>
+                    <small>Clients</small>
+                    <h2 class="mb-0">{{ clients }}</h2>
+                </div>
+                <div class="stat-icon">👥</div>
+            </div>
+        </div>
+    </div>
+
+    {% if is_admin %}
+    <div class="col-md-6 col-lg-3">
+        <div class="card stat-card shadow-sm bg-warning text-white">
+            <div class="card-body d-flex justify-content-between align-items-center">
+                <div>
+                    <small>Staff</small>
+                    <h2 class="mb-0">{{ staff }}</h2>
+                </div>
+                <div class="stat-icon">👩‍💼</div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="col-md-6 col-lg-3">
+        <div class="card stat-card shadow-sm bg-success text-white">
+            <div class="card-body d-flex justify-content-between align-items-center">
+                <div>
+                    <small>Services</small>
+                    <h2 class="mb-0">{{ services }}</h2>
+                </div>
+                <div class="stat-icon">💇</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 col-lg-3">
+        <div class="card stat-card shadow-sm bg-danger text-white">
+            <div class="card-body d-flex justify-content-between align-items-center">
+                <div>
+                    <small>Appointments</small>
+                    <h2 class="mb-0">{{ appointments }}</h2>
+                </div>
+                <div class="stat-icon">📅</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 col-lg-3">
+        <div class="card stat-card shadow-sm bg-dark text-white">
+            <div class="card-body d-flex justify-content-between align-items-center">
+                <div>
+                    <small>Today’s Sales</small>
+                    <h4 class="mb-0">KES {{ todays_revenue }}</h4>
+                </div>
+                <div class="stat-icon">💵</div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Analytics -->
+<div class="mb-3">
+    <h4 class="fw-bold mb-0">Performance Analytics</h4>
+    <small class="text-muted">Income, staff performance, attendance and commission</small>
+</div>
+
+<div class="row g-4 mb-4">
+
+    <div class="col-lg-6">
+        <div class="card chart-card shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-3">
+                    <div>
+                        <h6 class="fw-bold mb-0">Income Per Day</h6>
+                        <small class="text-muted">Daily completed sales this month</small>
+                    </div>
+                    <div class="chart-icon">💵</div>
+                </div>
+
+                <div class="chart-box">
+                    <canvas id="dailyIncomeChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card chart-card shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-3">
+                    <div>
+                        <h6 class="fw-bold mb-0">Income Per Month</h6>
+                        <small class="text-muted">Monthly sales this year</small>
+                    </div>
+                    <div class="chart-icon">📈</div>
+                </div>
+
+                <div class="chart-box">
+                    <canvas id="monthlyIncomeChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card chart-card shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-3">
+                    <div>
+                        <h6 class="fw-bold mb-0">Staff Performance</h6>
+                        <small class="text-muted">Completed jobs this month</small>
+                    </div>
+                    <div class="chart-icon">🏆</div>
+                </div>
+
+                <div class="chart-box-small">
+                    <canvas id="staffPerformanceChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card chart-card shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-3">
+                    <div>
+                        <h6 class="fw-bold mb-0">Attendance</h6>
+                        <small class="text-muted">Days checked in</small>
+                    </div>
+                    <div class="chart-icon">🕒</div>
+                </div>
+
+                <div class="chart-box-small">
+                    <canvas id="staffAttendanceChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card chart-card shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-3">
+                    <div>
+                        <h6 class="fw-bold mb-0">Commission</h6>
+                        <small class="text-muted">Total earned this month</small>
+                    </div>
+                    <div class="chart-icon">💰</div>
+                </div>
+
+                <div class="chart-box-small">
+                    <canvas id="staffCommissionChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Quick Actions -->
+<div class="row g-4">
+
+    <div class="col-lg-4">
+        <div class="card action-card shadow-sm">
+            <div class="card-body">
+                <h6 class="fw-bold mb-3">Quick Actions</h6>
+
+                <a href="/add-service/" class="btn btn-dark w-100 mb-2 rounded-3 py-2">💇 + Add Service</a>
+                <a href="/walk-in/" class="btn btn-dark w-100 mb-2 rounded-3 py-2">🚶 + Walk-in Customer</a>
+                <a href="/book-appointment/" class="btn btn-outline-dark w-100 mb-2 rounded-3 py-2">📅 Book Appointment</a>
+                <a href="/appointments/" class="btn btn-outline-dark w-100 mb-2 rounded-3 py-2">📋 View Appointments</a>
+                <a href="/clients/" class="btn btn-outline-dark w-100 mb-2 rounded-3 py-2">👥 View Clients</a>
+                <a href="/services/" class="btn btn-outline-dark w-100 rounded-3 py-2">💼 View Services</a>
+
+                {% if is_admin %}
+                <hr>
+
+                <p class="text-muted small fw-bold mb-2">Admin Tools</p>
+
+                <a href="/add-staff/" class="btn btn-outline-primary w-100 mb-2 rounded-3 py-2">👩‍💼 Add Staff</a>
+                <a href="/staff/" class="btn btn-outline-primary w-100 mb-2 rounded-3 py-2">👥 Manage Staff</a>
+                <a href="/staff/attendance/" class="btn btn-outline-primary w-100 mb-2 rounded-3 py-2">🕒 Staff Attendance</a>
+                <a href="/staff/commission/" class="btn btn-outline-primary w-100 mb-2 rounded-3 py-2">💰 Commission Report</a>
+                <a href="/staff/work-history/" class="btn btn-outline-primary w-100 rounded-3 py-2">📊 Staff Work History</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card action-card shadow-sm">
+            <div class="card-body">
+                <h6 class="fw-bold mb-3">Client Portal</h6>
+
+                <p class="text-muted small">
+                    Share this booking page with clients so they can request appointments online.
+                </p>
+
+                <a href="/book/" class="btn btn-success w-100 rounded-3 py-2">
+                    Open Booking Portal
+                </a>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+
+<script>
+    const staffLabels = {{ staff_labels|default:"[]"|safe }};
+    const staffJobs = {{ staff_jobs|default:"[]"|safe }};
+
+    const dailyLabels = {{ daily_labels|default:"[]"|safe }};
+    const dailySales = {{ daily_sales|default:"[]"|safe }};
+
+    const monthlyLabels = {{ monthly_labels|default:"[]"|safe }};
+    const monthlySales = {{ monthly_sales|default:"[]"|safe }};
+
+    const attendanceLabels = {{ attendance_labels|default:"[]"|safe }};
+    const attendanceDays = {{ attendance_days|default:"[]"|safe }};
+
+    const commissionLabels = {{ commission_labels|default:"[]"|safe }};
+    const commissionTotals = {{ commission_totals|default:"[]"|safe }};
+
+    function barChart(id, labels, values, title) {
+        new Chart(document.getElementById(id), {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: title,
+                    data: values,
+                    borderWidth: 1,
+                    borderRadius: 7
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { precision: 0 }
+                    }
+                }
+            }
+        });
+    }
+
+    function moneyBarChart(id, labels, values, title) {
+        new Chart(document.getElementById(id), {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: title,
+                    data: values,
+                    borderWidth: 1,
+                    borderRadius: 7
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return 'KES ' + context.raw;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+    }
+
+    new Chart(document.getElementById('dailyIncomeChart'), {
+        type: 'line',
+        data: {
+            labels: dailyLabels,
+            datasets: [{
+                label: 'Daily Income',
+                data: dailySales,
+                borderWidth: 3,
+                tension: 0.35,
+                fill: true,
+                pointRadius: 3
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return 'KES ' + context.raw;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: { beginAtZero: true }
+            }
+        }
+    });
+
+    moneyBarChart('monthlyIncomeChart', monthlyLabels, monthlySales, 'Monthly Income');
+    barChart('staffPerformanceChart', staffLabels, staffJobs, 'Completed Jobs');
+    barChart('staffAttendanceChart', attendanceLabels, attendanceDays, 'Attendance Days');
+    moneyBarChart('staffCommissionChart', commissionLabels, commissionTotals, 'Commission');
+</script>
+
+{% endblock %}
