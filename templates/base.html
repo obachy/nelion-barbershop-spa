@@ -175,18 +175,20 @@
         {% if is_admin %}
             <a href="/staff/">👩‍💼 Staff</a>
         {% endif %}
-        
+
         {% if is_admin or is_staff %}
             <a href="/staff/attendance/">🕒 Attendance</a>
         {% endif %}
 
         {% if is_admin %}
             <a href="/staff/commission/">💰 Commission</a>
+            <a href="/staff/payroll/">🧾 Payroll</a>
+            <a href="/expenses/">💸 Expenses & Bills</a>
             <a href="/staff/work-history/">📊 Work History</a>
         {% endif %}
 
         <a href="/logout/">🚪 Logout</a>
-    </div>
+</div>
 </div>
 
 <div class="container-fluid">
