@@ -27,10 +27,15 @@ SECRET_KEY = 'django-insecure-l@kt&^-)d$o)0q*f@_8w#_mbuwg!6@(e#m@jl2wq#ukt5d&b(w
 DEBUG = True
 
 ALLOWED_HOSTS = [
+    "45.91.169.146",
     "salon-management-ezch.onrender.com",
     ".onrender.com",
     "localhost",
     "127.0.0.1",
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    "http://45.91.169.146:8001",
 ]
 
 
