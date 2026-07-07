@@ -262,7 +262,7 @@ def staff_list(request):
     return render(request, 'staff.html', {'staff': staff})
 
 @login_required
-@user_passes_test(is_admin)
+@user_passes_test(is_admin_or_staff)
 def add_staff(request):
     if request.method == 'POST':
         form = StaffForm(request.POST)
@@ -282,7 +282,7 @@ def add_staff(request):
 # ======================
 
 @login_required
-@user_passes_test(is_admin)
+@user_passes_test(is_admin_or_staff)
 def services_list(request):
     services = Service.objects.all().order_by('name')
     return render(request, 'services.html', {'services': services})
@@ -745,6 +745,13 @@ def is_admin(user):
 
 def is_staff(user):
     return user.is_authenticated and user.groups.filter(name='Staff').exists()
+
+def is_admin_or_staff(user):
+    return user.is_authenticated and (
+        user.is_superuser
+        or user.groups.filter(name='Admin').exists()
+        or user.groups.filter(name='Staff').exists()
+    )
 
 @login_required
 def appointments_list(request):
