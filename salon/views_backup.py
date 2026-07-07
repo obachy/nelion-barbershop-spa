@@ -287,38 +287,19 @@ def services_list(request):
     return render(request, 'services.html', {'services': services})
 
 @login_required
+@user_passes_test(is_admin)
 def add_service(request):
-    staff_list = Staff.objects.all().order_by('name')
-
     if request.method == 'POST':
-        name = request.POST.get('name')
-        price = Decimal(str(request.POST.get('price') or 0))
-        duration = int(request.POST.get('duration') or 0)
+        form = ServiceForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('/services/')
+    else:
+        form = ServiceForm()
 
-        commission_percent = Decimal(str(request.POST.get('commission_percent') or 0))
-        commission_amount = Decimal(str(request.POST.get('commission_amount') or 0))
-
-        staff_ids = request.POST.getlist('staff')
-
-        # If cash commission is empty/0, calculate it from percentage
-        if commission_amount == 0 and commission_percent > 0:
-            commission_amount = (price * commission_percent) / Decimal('100')
-
-        service = Service.objects.create(
-            name=name,
-            price=price,
-            duration=duration,
-            commission_percent=commission_percent,
-            commission_amount=commission_amount,
-        )
-
-        service.staff.set(staff_ids)
-
-        messages.success(request, "Service added successfully.")
-        return redirect('/services/')
-
-    return render(request, 'add_service.html', {
-        'staff_list': staff_list,
+    return render(request, 'add_form.html', {
+        'form': form,
+        'title': 'Add Service'
     })
 
 @login_required

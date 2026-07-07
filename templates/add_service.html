@@ -1,149 +1,94 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Add Service</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+{% extends "base.html" %}
 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+{% block title %}Add Service - Salon System{% endblock %}
 
-    <style>
-        body {
-            background: #f4f6f9;
-        }
+{% block content %}
 
-        .page-card {
-            border: none;
-            border-radius: 22px;
-        }
-
-        .form-control, .form-select {
-            border-radius: 12px;
-            padding: 12px;
-        }
-
-        .section-title {
-            font-size: 13px;
-            color: #6b7280;
-            text-transform: uppercase;
-            letter-spacing: .08em;
-            font-weight: 700;
-        }
-
-        .staff-box {
-            border: 1px solid #e5e7eb;
-            border-radius: 14px;
-            padding: 12px;
-            background: #fff;
-        }
-
-        .top-bar {
-            background: #111827;
-            border-radius: 0 0 22px 22px;
-        }
-    </style>
-</head>
-
-<body>
-
-<div class="top-bar text-white py-4 mb-4">
-    <div class="container d-flex justify-content-between align-items-center">
-        <div>
-            <h3 class="mb-0 fw-bold">Add Service</h3>
-            <small class="text-white-50">Create salon service, time, commission and assigned staff</small>
-        </div>
-
-        <a href="/" class="btn btn-outline-light rounded-pill px-4">Dashboard</a>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h3 class="fw-bold mb-0">Add Service</h3>
+        <small class="text-muted">Create salon services with price and staff commission</small>
     </div>
+
+    <a href="/services/" class="btn btn-outline-dark rounded-pill px-4">
+        View Services
+    </a>
 </div>
 
-<div class="container mb-5">
-    <div class="row justify-content-center">
-        <div class="col-lg-8">
+<div class="row">
+    <div class="col-lg-7">
+        <div class="card shadow-sm border-0 rounded-4">
+            <div class="card-body p-4">
 
-            <div class="card page-card shadow-sm">
-                <div class="card-body p-4 p-md-5">
+                <form method="post">
+                    {% csrf_token %}
 
-                    <form method="post">
-                        {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Service Name</label>
+                        <input type="text" name="name" class="form-control" placeholder="Example: Hair Styling" required>
+                    </div>
 
-                        <p class="section-title mb-3">Service Information</p>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Service Price</label>
+                        <input type="number" name="price" class="form-control" placeholder="Example: 500" min="0" step="0.01" required>
+                        <small class="text-muted">This is the price customer pays.</small>
+                    </div>
 
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold">Service Name</label>
-                            <input type="text" name="name" class="form-control" placeholder="Example: Hair Styling" required>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Duration in Minutes</label>
+                        <input type="number" name="duration" class="form-control" placeholder="Example: 30" min="0" required>
+                    </div>
+
+                    <hr>
+
+                    <h6 class="fw-bold mb-3">Staff Commission</h6>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Commission Percentage</label>
+                            <input type="number" name="commission_percent" class="form-control" placeholder="Example: 10" min="0" step="0.01" value="0">
+                            <small class="text-muted">Example: 10 means 10% of service price.</small>
                         </div>
 
-                        <div class="row">
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label fw-semibold">Commission Percentage</label>
-                                <input type="number" step="0.01" name="commission_amount" class="form-control" placeholder="Example: 400">
-                                <small class="text-muted">Enter 40 for 40%</small>
-                            </div>
-
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label fw-semibold">Commission Amount</label>
-                                <input type="number" step="0.01" name="commission_amount" class="form-control" placeholder="Example: 400">
-                                <small class="text-muted">Enter fixed amount in KES</small>
-                            </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Commission Cash Amount</label>
+                            <input type="number" name="commission_amount" class="form-control" placeholder="Example: 100" min="0" step="0.01" value="0">
+                            <small class="text-muted">Use this if commission is fixed cash.</small>
                         </div>
+                    </div>
 
-                            <div class="alert alert-success rounded-4">
-                                You can enter both. If commission amount is left empty, the system calculates it from the percentage.
-                            </div>
+                    <div class="alert alert-info rounded-3">
+                        If you enter cash commission, the system uses the cash amount.
+                        If cash is 0, it calculates using percentage.
+                    </div>
 
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label fw-semibold">Commission</label>
-                                <input type="number" name="commission_percent" class="form-control" placeholder="40" required>
-                                <small class="text-muted">Enter 40 for 40%</small>
-                            </div>
-                        </div>
-                        
-                            <div class="col-md-4 mb-3">
-                                 <label class="form-label fw-semibold">Duration</label>
-                                 <input type="number" name="duration" class="form-control" placeholder="60" required>
-                                 <small class="text-muted">Minutes</small>
-                            </div>
-                        </div>
-                        
-                        <div class="alert alert-success rounded-4">
-                            Example: If price is <strong>KES 1000</strong> and commission is <strong>40%</strong>,
-                            staff earns <strong>KES 400</strong>.
-                        </div>
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">Staff Who Can Do This Service</label>
 
-                        <p class="section-title mt-4 mb-3">Assign Staff</p>
-
-                        <div class="staff-box">
-                            {% for staff in staff_list %}
-                            <div class="form-check mb-2">
+                        {% for staff in staff_list %}
+                            <div class="form-check">
                                 <input class="form-check-input" type="checkbox" name="staff" value="{{ staff.id }}" id="staff{{ staff.id }}">
                                 <label class="form-check-label" for="staff{{ staff.id }}">
                                     {{ staff.name }}
                                 </label>
                             </div>
-                            {% empty %}
-                            <p class="text-danger mb-0">No staff found. Add staff first.</p>
-                            {% endfor %}
-                        </div>
+                        {% empty %}
+                            <p class="text-muted">No staff added yet.</p>
+                        {% endfor %}
+                    </div>
 
-                        <div class="d-flex gap-2 mt-4">
-                            <button class="btn btn-dark rounded-pill px-4">
-                                Save Service
-                            </button>
+                    <button type="submit" class="btn btn-dark rounded-pill px-4">
+                        Save Service
+                    </button>
 
-                            <a href="/services/" class="btn btn-outline-secondary rounded-pill px-4">
-                                Cancel
-                            </a>
-                        </div>
+                    <a href="/services/" class="btn btn-outline-secondary rounded-pill px-4 ms-2">
+                        Cancel
+                    </a>
+                </form>
 
-                    </form>
-
-                </div>
             </div>
-
         </div>
     </div>
 </div>
 
-</body>
-</html>
-</html>
+{% endblock %}
