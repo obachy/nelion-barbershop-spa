@@ -119,34 +119,3 @@ class StaffPenalty(models.Model):
 
     def __str__(self):
         return f"{self.staff} - {self.amount}"
-    
-class Expense(models.Model):
-    TYPE_CHOICES = [
-        ('Expense', 'Expense'),
-        ('Bill', 'Bill'),
-    ]
-
-    STATUS_CHOICES = [
-        ('Paid', 'Paid'),
-        ('Unpaid', 'Unpaid'),
-    ]
-
-    PAYMENT_METHOD_CHOICES = [
-        ('Cash', 'Cash'),
-        ('M-Pesa', 'M-Pesa'),
-        ('Bank', 'Bank'),
-        ('Other', 'Other'),
-    ]
-
-    expense_type = models.CharField(max_length=20, choices=TYPE_CHOICES, default='Expense')
-    title = models.CharField(max_length=150)
-    amount = models.DecimalField(max_digits=10, decimal_places=2)
-    payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD_CHOICES, default='Cash')
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Paid')
-    expense_date = models.DateField()
-    due_date = models.DateField(blank=True, null=True)
-    notes = models.TextField(blank=True, null=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"{self.expense_type} - {self.title} - {self.amount}"

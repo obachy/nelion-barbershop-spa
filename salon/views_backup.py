@@ -58,7 +58,7 @@ class RoleBasedLoginView(LoginView):
         if is_admin(user):
             return reverse_lazy('dashboard')
         if is_staff(user):
-            return reverse_lazy('appointments')
+            return reverse_lazy('dashboard')
         return reverse_lazy('login')
 
 # ======================
@@ -66,6 +66,7 @@ class RoleBasedLoginView(LoginView):
 # ======================
 
 @login_required
+@user_passes_test(is_admin_or_staff)
 def dashboard(request):
     today = date.today()
 
@@ -261,7 +262,7 @@ def staff_list(request):
     return render(request, 'staff.html', {'staff': staff})
 
 @login_required
-@user_passes_test(is_admin)
+@user_passes_test(is_admin_or_staff)
 def add_staff(request):
     if request.method == 'POST':
         form = StaffForm(request.POST)
@@ -281,25 +282,44 @@ def add_staff(request):
 # ======================
 
 @login_required
-@user_passes_test(is_admin)
+@user_passes_test(is_admin_or_staff)
 def services_list(request):
     services = Service.objects.all().order_by('name')
     return render(request, 'services.html', {'services': services})
 
 @login_required
-@user_passes_test(is_admin)
 def add_service(request):
-    if request.method == 'POST':
-        form = ServiceForm(request.POST)
-        if form.is_valid():
-            form.save()
-            return redirect('/services/')
-    else:
-        form = ServiceForm()
+    staff_list = Staff.objects.all().order_by('name')
 
-    return render(request, 'add_form.html', {
-        'form': form,
-        'title': 'Add Service'
+    if request.method == 'POST':
+        name = request.POST.get('name')
+        price = Decimal(str(request.POST.get('price') or 0))
+        duration = int(request.POST.get('duration') or 0)
+
+        commission_percent = Decimal(str(request.POST.get('commission_percent') or 0))
+        commission_amount = Decimal(str(request.POST.get('commission_amount') or 0))
+
+        staff_ids = request.POST.getlist('staff')
+
+        # If cash commission is empty/0, calculate it from percentage
+        if commission_amount == 0 and commission_percent > 0:
+            commission_amount = (price * commission_percent) / Decimal('100')
+
+        service = Service.objects.create(
+            name=name,
+            price=price,
+            duration=duration,
+            commission_percent=commission_percent,
+            commission_amount=commission_amount,
+        )
+
+        service.staff.set(staff_ids)
+
+        messages.success(request, "Service added successfully.")
+        return redirect('/services/')
+
+    return render(request, 'add_service.html', {
+        'staff_list': staff_list,
     })
 
 @login_required
@@ -726,6 +746,13 @@ def is_admin(user):
 def is_staff(user):
     return user.is_authenticated and user.groups.filter(name='Staff').exists()
 
+def is_admin_or_staff(user):
+    return user.is_authenticated and (
+        user.is_superuser
+        or user.groups.filter(name='Admin').exists()
+        or user.groups.filter(name='Staff').exists()
+    )
+
 @login_required
 def appointments_list(request):
     appointments = Appointment.objects.select_related(
@@ -847,3 +874,65 @@ def public_staff_check_out(request, attendance_id):
             messages.success(request, f"{attendance.staff.name} checked out successfully.")
 
     return redirect('/staff/public-attendance/')
+
+@login_required
+@user_passes_test(is_admin)
+def payroll_report(request):
+    today = date.today()
+
+    selected_month = int(request.GET.get('month', today.month))
+    selected_year = int(request.GET.get('year', today.year))
+
+    payroll_rows = []
+
+    for staff_member in Staff.objects.all().order_by('name'):
+        completed_appointments = Appointment.objects.filter(
+            staff=staff_member,
+            status='Completed',
+            date__month=selected_month,
+            date__year=selected_year
+        ).select_related('service')
+
+        total_sales = Decimal('0')
+        total_commission = Decimal('0')
+
+        for appointment in completed_appointments:
+            service_price = Decimal(str(appointment.service.price or 0))
+            commission_percent = Decimal(str(appointment.service.commission_percent or 0))
+            commission_amount = Decimal(str(appointment.service.commission_amount or 0))
+
+            # If fixed cash commission exists, use it.
+            # If cash commission is 0, calculate from percentage.
+            if commission_amount > 0:
+                earned_commission = commission_amount
+            else:
+                earned_commission = (service_price * commission_percent) / Decimal('100')
+
+            total_sales += service_price
+            total_commission += earned_commission
+
+        total_penalties = StaffPenalty.objects.filter(
+            staff=staff_member,
+            date__month=selected_month,
+            date__year=selected_year
+        ).aggregate(total=Sum('amount'))['total'] or 0
+
+        total_penalties = Decimal(str(total_penalties))
+        net_pay = total_commission - total_penalties
+
+        payroll_rows.append({
+            'staff': staff_member,
+            'jobs': completed_appointments.count(),
+            'total_sales': total_sales,
+            'total_commission': total_commission,
+            'total_penalties': total_penalties,
+            'net_pay': net_pay,
+        })
+
+    return render(request, 'payroll_report.html', {
+        'payroll_rows': payroll_rows,
+        'selected_month': selected_month,
+        'selected_year': selected_year,
+        'is_admin': is_admin(request.user),
+        'is_staff': is_staff(request.user),
+    })

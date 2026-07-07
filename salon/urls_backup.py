@@ -28,10 +28,6 @@ from .views import (
     walk_in_customer,
     staff_work_history,
     payroll_report,
-    expenses_list,
-    add_expense,
-    mark_expense_paid,
-    delete_expense,
 )
 
 urlpatterns = [
@@ -69,9 +65,4 @@ urlpatterns = [
     path('staff/public-check-in/<int:staff_id>/', public_staff_check_in, name='public_staff_check_in'),
     path('staff/public-check-out/<int:attendance_id>/', public_staff_check_out, name='public_staff_check_out'),
     path('staff/payroll/', payroll_report, name='payroll_report'),
-
-    path('expenses/', expenses_list, name='expenses'),
-    path('expenses/add/', add_expense, name='add_expense'),
-    path('expenses/paid/<int:expense_id>/', mark_expense_paid, name='mark_expense_paid'),
-    path('expenses/delete/<int:expense_id>/', delete_expense, name='delete_expense'),
 ]
