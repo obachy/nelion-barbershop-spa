@@ -58,7 +58,7 @@ class RoleBasedLoginView(LoginView):
         if is_admin(user):
             return reverse_lazy('dashboard')
         if is_staff(user):
-            return reverse_lazy('appointments')
+            return reverse_lazy('dashboard')
         return reverse_lazy('login')
 
 # ======================
@@ -66,6 +66,7 @@ class RoleBasedLoginView(LoginView):
 # ======================
 
 @login_required
+@user_passes_test(is_admin_or_staff)
 def dashboard(request):
     today = date.today()
 
