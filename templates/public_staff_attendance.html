@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Staff Attendance</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+        body {
+            background: #f4f6f9;
+            font-family: Arial, sans-serif;
+            padding: 16px;
+        }
+
+        .page-box {
+            max-width: 850px;
+            margin: auto;
+        }
+
+        .top-card {
+            background: #111827;
+            color: white;
+            border-radius: 22px;
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+
+        .staff-card {
+            border: none;
+            border-radius: 18px;
+            margin-bottom: 14px;
+        }
+
+        .btn-checkin {
+            background: #16a34a;
+            color: white;
+            border: none;
+        }
+
+        .btn-checkout {
+            background: #dc2626;
+            color: white;
+            border: none;
+        }
+
+        .btn-checkin:hover,
+        .btn-checkout:hover {
+            color: white;
+            opacity: 0.9;
+        }
+
+        @media (max-width: 576px) {
+            .top-card {
+                padding: 20px;
+                border-radius: 18px;
+            }
+
+            .staff-actions {
+                margin-top: 12px;
+            }
+
+            .staff-actions form,
+            .staff-actions button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="page-box">
+
+    <div class="top-card">
+        <h3 class="fw-bold mb-1">Staff Attendance</h3>
+        <p class="mb-0">Check in and check out for today: {{ today }}</p>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-info">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    {% for row in rows %}
+        <div class="card staff-card shadow-sm">
+            <div class="card-body">
+                <div class="row align-items-center">
+
+                    <div class="col-md-5">
+                        <h5 class="fw-bold mb-1">{{ row.staff.name }}</h5>
+                        <small class="text-muted">{{ row.staff.phone }}</small>
+                    </div>
+
+                    <div class="col-md-4 mt-2 mt-md-0">
+                        {% if row.attendance %}
+                            <div>
+                                <strong>In:</strong> {{ row.attendance.check_in }}
+                            </div>
+
+                            {% if row.attendance.check_out %}
+                                <div>
+                                    <strong>Out:</strong> {{ row.attendance.check_out }}
+                                </div>
+                            {% else %}
+                                <small class="text-success">Currently checked in</small>
+                            {% endif %}
+
+                            {% if row.attendance.is_late %}
+                                <div>
+                                    <span class="badge bg-danger">Late</span>
+                                </div>
+                            {% endif %}
+                        {% else %}
+                            <span class="badge bg-secondary">Not checked in</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="col-md-3 staff-actions text-md-end">
+                        {% if row.attendance %}
+                            {% if row.attendance.check_out %}
+                                <button class="btn btn-secondary rounded-pill" disabled>
+                                    Done
+                                </button>
+                            {% else %}
+                                <form method="post" action="/staff/public-check-out/{{ row.attendance.id }}/">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-checkout rounded-pill">
+                                        Check Out
+                                    </button>
+                                </form>
+                            {% endif %}
+                        {% else %}
+                            <form method="post" action="/staff/public-check-in/{{ row.staff.id }}/">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-checkin rounded-pill">
+                                    Check In
+                                </button>
+                            </form>
+                        {% endif %}
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    {% empty %}
+        <div class="alert alert-warning">
+            No staff members found.
+        </div>
+    {% endfor %}
+
+    <div class="text-center mt-4">
+        <a href="/login/" class="btn btn-outline-dark rounded-pill px-4">
+            Back to Login
+        </a>
+    </div>
+
+</div>
+
+</body>
+</html>

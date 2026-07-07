@@ -1,5 +1,8 @@
 from django.urls import path
 from .views import (
+    public_staff_attendance,
+    public_staff_check_in,
+    public_staff_check_out,
     dashboard,
     book_appointment,
     update_appointment_status,
@@ -57,4 +60,7 @@ urlpatterns = [
 
     path('ajax/available-staff/', ajax_available_staff, name='ajax_available_staff'),
     path('walk-in/', walk_in_customer, name='walk_in_customer'),
+    path('staff/public-attendance/', public_staff_attendance, name='public_staff_attendance'),
+    path('staff/public-check-in/<int:staff_id>/', public_staff_check_in, name='public_staff_check_in'),
+    path('staff/public-check-out/<int:attendance_id>/', public_staff_check_out, name='public_staff_check_out'),
 ]

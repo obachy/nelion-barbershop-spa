@@ -777,3 +777,73 @@ def delete_appointment(request, appointment_id):
 def logout_view(request):
     logout(request)
     return redirect('/login/')
+
+def public_staff_attendance(request):
+    today = timezone.localdate()
+    staff_list = Staff.objects.all().order_by('name')
+    rows = []
+
+    for staff_member in staff_list:
+        attendance = StaffAttendance.objects.filter(
+            staff=staff_member,
+            date=today
+        ).first()
+
+        rows.append({
+            'staff': staff_member,
+            'attendance': attendance,
+        })
+
+    return render(request, 'public_staff_attendance.html', {
+        'rows': rows,
+        'today': today,
+    })
+
+
+def public_staff_check_in(request, staff_id):
+    if request.method == 'POST':
+        staff = get_object_or_404(Staff, id=staff_id)
+        today = timezone.localdate()
+        now_time = timezone.localtime().time()
+
+        attendance, created = StaffAttendance.objects.get_or_create(
+            staff=staff,
+            date=today,
+            defaults={'check_in': now_time}
+        )
+
+        if created:
+            late_limit = time(8, 30)
+
+            if now_time > late_limit:
+                attendance.is_late = True
+                attendance.save()
+
+                StaffPenalty.objects.get_or_create(
+                    staff=staff,
+                    attendance=attendance,
+                    defaults={
+                        'amount': 50,
+                        'reason': 'Late arrival after 8:30 AM',
+                    }
+                )
+
+            messages.success(request, f"{staff.name} checked in successfully.")
+        else:
+            messages.info(request, f"{staff.name} already checked in today.")
+
+    return redirect('/staff/public-attendance/')
+
+
+def public_staff_check_out(request, attendance_id):
+    if request.method == 'POST':
+        attendance = get_object_or_404(StaffAttendance, id=attendance_id)
+
+        if attendance.check_out:
+            messages.info(request, f"{attendance.staff.name} already checked out.")
+        else:
+            attendance.check_out = timezone.localtime().time()
+            attendance.save()
+            messages.success(request, f"{attendance.staff.name} checked out successfully.")
+
+    return redirect('/staff/public-attendance/')
