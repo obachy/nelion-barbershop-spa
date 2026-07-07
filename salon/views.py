@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.views import LoginView
+from django.contrib.auth import logout
 from django.urls import reverse_lazy
 from django.db.models import Sum
 from django.utils import timezone
@@ -317,6 +318,7 @@ GRACE_PERIOD_MINUTES = 10
 LATE_PENALTY_AMOUNT = 50
 
 @login_required
+@user_passes_test(is_admin_or_staff)
 def staff_attendance_list(request):
     today = timezone.localdate()
 
@@ -337,6 +339,7 @@ def staff_attendance_list(request):
     return render(request, 'staff_attendance.html', context)
 
 @login_required
+@user_passes_test(is_admin_or_staff)
 def staff_check_in(request, staff_id):
     staff = get_object_or_404(Staff, id=staff_id)
     today = timezone.localdate()
@@ -369,6 +372,7 @@ def staff_check_in(request, staff_id):
     return redirect('staff_attendance')
    
 @login_required
+@user_passes_test(is_admin_or_staff)
 def staff_check_out(request, attendance_id):
     attendance = get_object_or_404(StaffAttendance, id=attendance_id)
     attendance.check_out = timezone.localtime().time()
@@ -452,6 +456,7 @@ def ajax_available_staff(request):
 
 # salon/views.py
 @login_required
+@user_passes_test(is_admin)
 def staff_commission_report(request):
     today = date.today()
 
@@ -593,6 +598,7 @@ def add_service(request):
         'staff_list': staff_list
     })
 @login_required
+@user_passes_test(is_admin)
 def staff_work_history(request):
     today = date.today()
 
@@ -767,3 +773,7 @@ def delete_appointment(request, appointment_id):
     appointment = get_object_or_404(Appointment, id=appointment_id)
     appointment.delete()
     return redirect('/appointments/')
+
+def logout_view(request):
+    logout(request)
+    return redirect('/login/')

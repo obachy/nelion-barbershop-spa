@@ -109,6 +109,7 @@
         </div>
     </div>
 
+    {% if is_admin %}
     <div class="col-lg-6">
         <div class="card chart-card shadow-sm">
             <div class="card-body">
@@ -126,6 +127,7 @@
             </div>
         </div>
     </div>
+    {% endif %}
 
     <div class="col-lg-4">
         <div class="card chart-card shadow-sm">
@@ -145,7 +147,7 @@
         </div>
     </div>
 
-    <div class="col-lg-4">
+    <div class="col-12 col-lg-4">
         <div class="card chart-card shadow-sm">
             <div class="card-body">
                 <div class="d-flex justify-content-between mb-3">
@@ -192,7 +194,7 @@
                 <h6 class="fw-bold mb-3">Quick Actions</h6>
 
                 <a href="/add-service/" class="btn btn-dark w-100 mb-2 rounded-3 py-2">💇 + Add Service</a>
-                <a href="/walk-in/" class="btn btn-dark w-100 mb-2 rounded-3 py-2">🚶 + Walk-in Customer</a>
+                <a href="/walk-in/" class="btn btn-dark rounded-pill px-4 w-100">🚶 + Walk-in Customer</a>
                 <a href="/book-appointment/" class="btn btn-outline-dark w-100 mb-2 rounded-3 py-2">📅 Book Appointment</a>
                 <a href="/appointments/" class="btn btn-outline-dark w-100 mb-2 rounded-3 py-2">📋 View Appointments</a>
                 <a href="/clients/" class="btn btn-outline-dark w-100 mb-2 rounded-3 py-2">👥 View Clients</a>
