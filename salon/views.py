@@ -176,6 +176,18 @@ def dashboard(request):
         commission_labels.append(staff_member.name)
         commission_totals.append(float(total_commission))
 
+    paid_invoice_total = Decimal('0')
+    unpaid_invoice_total = Decimal('0')
+
+    for invoice in Invoice.objects.all():
+        invoice_total = Decimal(str(invoice.total_amount()))
+
+        if invoice.status == 'Paid':
+            paid_invoice_total += invoice_total
+
+        if invoice.status == 'Unpaid':
+             unpaid_invoice_total += invoice_total 
+
     context = {
         'clients': Client.objects.count(),
         'staff': Staff.objects.count(),
@@ -200,6 +212,9 @@ def dashboard(request):
 
         'is_admin': is_admin(request.user),
         'is_staff': is_staff(request.user),
+
+        'paid_invoice_total': paid_invoice_total,
+        'unpaid_invoice_total': unpaid_invoice_total,
     }
 
     return render(request, 'dashboard.html', context)
