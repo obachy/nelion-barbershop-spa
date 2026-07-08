@@ -24,6 +24,8 @@ from .models import (
     StaffPenalty,
     Appointment,
     Expense,
+    Invoice,
+    InvoiceItem,
 
 )
 
@@ -1031,3 +1033,113 @@ def delete_expense(request, expense_id):
     expense.delete()
     messages.success(request, "Expense/Bill deleted.")
     return redirect('/expenses/')
+
+@login_required
+@user_passes_test(is_admin)
+def invoice_list(request):
+    invoices = Invoice.objects.select_related('client').all().order_by('-invoice_date', '-id')
+
+    total_unpaid = Decimal('0')
+    total_paid = Decimal('0')
+
+    for invoice in invoices:
+        total = Decimal(str(invoice.total_amount()))
+
+        if invoice.status == 'Paid':
+            total_paid += total
+        elif invoice.status == 'Unpaid':
+            total_unpaid += total
+
+    return render(request, 'invoice_list.html', {
+        'invoices': invoices,
+        'total_paid': total_paid,
+        'total_unpaid': total_unpaid,
+        'is_admin': is_admin(request.user),
+        'is_staff': is_staff(request.user),
+    })
+
+
+@login_required
+@user_passes_test(is_admin)
+def add_invoice(request):
+    clients = Client.objects.all().order_by('name')
+
+    if request.method == 'POST':
+        client_id = request.POST.get('client')
+        invoice_date = request.POST.get('invoice_date')
+        due_date = request.POST.get('due_date') or None
+        status = request.POST.get('status') or 'Unpaid'
+        notes = request.POST.get('notes')
+
+        descriptions = request.POST.getlist('description')
+        quantities = request.POST.getlist('quantity')
+        unit_prices = request.POST.getlist('unit_price')
+
+        invoice = Invoice.objects.create(
+            client_id=client_id,
+            invoice_date=invoice_date,
+            due_date=due_date,
+            status=status,
+            notes=notes,
+        )
+
+        for description, quantity, unit_price in zip(descriptions, quantities, unit_prices):
+            if description.strip():
+                InvoiceItem.objects.create(
+                    invoice=invoice,
+                    description=description,
+                    quantity=Decimal(str(quantity or 1)),
+                    unit_price=Decimal(str(unit_price or 0)),
+                )
+
+        messages.success(request, "Invoice created successfully.")
+        return redirect(f'/invoices/{invoice.id}/')
+
+    return render(request, 'add_invoice.html', {
+        'clients': clients,
+        'is_admin': is_admin(request.user),
+        'is_staff': is_staff(request.user),
+    })
+
+
+@login_required
+@user_passes_test(is_admin)
+def invoice_detail(request, invoice_id):
+    invoice = get_object_or_404(Invoice, id=invoice_id)
+
+    return render(request, 'invoice_detail.html', {
+        'invoice': invoice,
+        'items': invoice.items.all(),
+        'total': invoice.total_amount(),
+        'is_admin': is_admin(request.user),
+        'is_staff': is_staff(request.user),
+    })
+
+
+@login_required
+@user_passes_test(is_admin)
+def mark_invoice_paid(request, invoice_id):
+    invoice = get_object_or_404(Invoice, id=invoice_id)
+    invoice.status = 'Paid'
+    invoice.save()
+    messages.success(request, "Invoice marked as paid.")
+    return redirect(f'/invoices/{invoice.id}/')
+
+
+@login_required
+@user_passes_test(is_admin)
+def mark_invoice_unpaid(request, invoice_id):
+    invoice = get_object_or_404(Invoice, id=invoice_id)
+    invoice.status = 'Unpaid'
+    invoice.save()
+    messages.success(request, "Invoice marked as unpaid.")
+    return redirect(f'/invoices/{invoice.id}/')
+
+
+@login_required
+@user_passes_test(is_admin)
+def delete_invoice(request, invoice_id):
+    invoice = get_object_or_404(Invoice, id=invoice_id)
+    invoice.delete()
+    messages.success(request, "Invoice deleted.")
+    return redirect('/invoices/')

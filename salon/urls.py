@@ -32,6 +32,12 @@ from .views import (
     add_expense,
     mark_expense_paid,
     delete_expense,
+    invoice_list,
+    add_invoice,
+    invoice_detail,
+    mark_invoice_paid,
+    mark_invoice_unpaid,
+    delete_invoice,
 )
 
 urlpatterns = [
@@ -74,4 +80,10 @@ urlpatterns = [
     path('expenses/add/', add_expense, name='add_expense'),
     path('expenses/paid/<int:expense_id>/', mark_expense_paid, name='mark_expense_paid'),
     path('expenses/delete/<int:expense_id>/', delete_expense, name='delete_expense'),
+    path('invoices/', invoice_list, name='invoice_list'),
+    path('invoices/add/', add_invoice, name='add_invoice'),
+    path('invoices/<int:invoice_id>/', invoice_detail, name='invoice_detail'),
+    path('invoices/paid/<int:invoice_id>/', mark_invoice_paid, name='mark_invoice_paid'),
+    path('invoices/unpaid/<int:invoice_id>/', mark_invoice_unpaid, name='mark_invoice_unpaid'),
+    path('invoices/delete/<int:invoice_id>/', delete_invoice, name='delete_invoice'),
 ]

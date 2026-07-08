@@ -23,6 +23,7 @@ from .models import (
     StaffAttendance,
     StaffPenalty,
     Appointment,
+    Expense,
 
 )
 
@@ -936,3 +937,97 @@ def payroll_report(request):
         'is_admin': is_admin(request.user),
         'is_staff': is_staff(request.user),
     })
+
+@login_required
+@user_passes_test(is_admin)
+def expenses_list(request):
+    today = date.today()
+
+    selected_month = int(request.GET.get('month', today.month))
+    selected_year = int(request.GET.get('year', today.year))
+
+    expenses = Expense.objects.filter(
+        expense_date__month=selected_month,
+        expense_date__year=selected_year
+    ).order_by('-expense_date', '-created_at')
+
+    total_expenses = expenses.filter(expense_type='Expense').aggregate(
+        total=Sum('amount')
+    )['total'] or 0
+
+    total_bills = expenses.filter(expense_type='Bill').aggregate(
+        total=Sum('amount')
+    )['total'] or 0
+
+    unpaid_bills = expenses.filter(
+        expense_type='Bill',
+        status='Unpaid'
+    ).aggregate(total=Sum('amount'))['total'] or 0
+
+    paid_total = expenses.filter(status='Paid').aggregate(
+        total=Sum('amount')
+    )['total'] or 0
+
+    return render(request, 'expenses.html', {
+        'expenses': expenses,
+        'selected_month': selected_month,
+        'selected_year': selected_year,
+        'total_expenses': total_expenses,
+        'total_bills': total_bills,
+        'unpaid_bills': unpaid_bills,
+        'paid_total': paid_total,
+        'is_admin': is_admin(request.user),
+        'is_staff': is_staff(request.user),
+    })
+
+
+@login_required
+@user_passes_test(is_admin)
+def add_expense(request):
+    if request.method == 'POST':
+        expense_type = request.POST.get('expense_type')
+        title = request.POST.get('title')
+        amount = Decimal(str(request.POST.get('amount') or 0))
+        payment_method = request.POST.get('payment_method')
+        status = request.POST.get('status')
+        expense_date = request.POST.get('expense_date')
+        due_date = request.POST.get('due_date') or None
+        notes = request.POST.get('notes')
+
+        Expense.objects.create(
+            expense_type=expense_type,
+            title=title,
+            amount=amount,
+            payment_method=payment_method,
+            status=status,
+            expense_date=expense_date,
+            due_date=due_date,
+            notes=notes,
+        )
+
+        messages.success(request, "Expense/Bill added successfully.")
+        return redirect('/expenses/')
+
+    return render(request, 'add_expense.html', {
+        'is_admin': is_admin(request.user),
+        'is_staff': is_staff(request.user),
+    })
+
+
+@login_required
+@user_passes_test(is_admin)
+def mark_expense_paid(request, expense_id):
+    expense = get_object_or_404(Expense, id=expense_id)
+    expense.status = 'Paid'
+    expense.save()
+    messages.success(request, "Bill marked as paid.")
+    return redirect('/expenses/')
+
+
+@login_required
+@user_passes_test(is_admin)
+def delete_expense(request, expense_id):
+    expense = get_object_or_404(Expense, id=expense_id)
+    expense.delete()
+    messages.success(request, "Expense/Bill deleted.")
+    return redirect('/expenses/')

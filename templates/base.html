@@ -11,6 +11,7 @@
         body {
             background: #f4f6f9;
             font-family: Arial, sans-serif;
+            overflow-x: hidden;
         }
 
         .sidebar {
@@ -40,6 +41,9 @@
         .mobile-topbar {
             background: #111827;
             padding: 12px 16px;
+            position: sticky;
+            top: 0;
+            z-index: 999;
         }
 
         .mobile-menu {
@@ -97,54 +101,42 @@
             text-align: left;
         }
 
-        @media (max-width: 768px) {
-            body {
-                background: #f6f7fb;
+        @media (max-width: 576px) {
+            .container-fluid {
+                padding-left: 0;
+                padding-right: 0;
+            }
+
+            .row {
+                margin-left: 0;
+                margin-right: 0;
             }
 
             .main-content {
-                padding: 16px;
+                padding: 12px;
             }
 
-            .stat-card .card-body {
-                padding: 16px;
+            .main-content h3 {
+                font-size: 22px;
             }
 
-            .stat-card h2 {
-                font-size: 26px;
-            }
-
-            .stat-card h4 {
-                font-size: 19px;
-            }
-
-            .chart-card .card-body {
-                padding: 15px;
+            .main-content h4 {
+                font-size: 18px;
             }
 
             .chart-box,
             .chart-box-small {
-                height: 190px;
+                height: 160px;
+                width: 100%;
             }
 
-            .chart-card h6 {
+            canvas {
+                max-width: 100% !important;
+            }
+
+            .mobile-menu a {
                 font-size: 14px;
-            }
-
-            .chart-card small {
-                font-size: 12px;
-            }
-
-            .chart-icon {
-                width: 34px;
-                height: 34px;
-                font-size: 16px;
-            }
-
-            .action-card .btn {
-                font-size: 14px;
-                padding-top: 10px;
-                padding-bottom: 10px;
+                padding: 10px 14px;
             }
         }
     </style>
@@ -159,7 +151,10 @@
     <div class="mobile-topbar d-flex justify-content-between align-items-center">
         <h5 class="text-white mb-0 fw-bold">Salon System</h5>
 
-        <button class="btn btn-outline-light btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#mobileMenu">
+        <button class="btn btn-outline-light btn-sm"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#mobileMenu">
             ☰ Menu
         </button>
     </div>
@@ -167,12 +162,13 @@
     <div class="collapse mobile-menu" id="mobileMenu">
         <a href="/">🏠 Dashboard</a>
         <a href="/walk-in/">🚶 Walk-in Customer</a>
-        <a href="/add-service/">💇 Add Service</a>
         <a href="/appointments/">📅 Appointments</a>
         <a href="/clients/">👥 Clients</a>
         <a href="/services/">💼 Services</a>
+        <a href="/invoices/">🧾 Invoices</a>
 
         {% if is_admin %}
+            <a href="/add-service/">💇 Add Service</a>
             <a href="/staff/">👩‍💼 Staff</a>
         {% endif %}
 
@@ -188,7 +184,7 @@
         {% endif %}
 
         <a href="/logout/">🚪 Logout</a>
-</div>
+    </div>
 </div>
 
 <div class="container-fluid">
@@ -200,12 +196,13 @@
 
             <a href="/">🏠 Dashboard</a>
             <a href="/walk-in/">🚶 Walk-in Customer</a>
-            <a href="/add-service/">💇 Add Service</a>
             <a href="/appointments/">📅 Appointments</a>
             <a href="/clients/">👥 Clients</a>
             <a href="/services/">💼 Services</a>
+            <a href="/invoices/">🧾 Invoices</a>
 
             {% if is_admin %}
+                <a href="/add-service/">💇 Add Service</a>
                 <a href="/staff/">👩‍💼 Staff</a>
             {% endif %}
 

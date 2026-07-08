@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+
+{% block title %}Invoice {{ invoice.invoice_number }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    @media print {
+        .sidebar,
+        .mobile-topbar,
+        .mobile-menu,
+        .no-print {
+            display: none !important;
+        }
+
+        .main-content {
+            width: 100% !important;
+            padding: 0 !important;
+        }
+
+        body {
+            background: white !important;
+        }
+
+        .invoice-card {
+            box-shadow: none !important;
+            border: none !important;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4 no-print">
+    <div>
+        <h3 class="fw-bold mb-0">Invoice {{ invoice.invoice_number }}</h3>
+        <small class="text-muted">View and print invoice</small>
+    </div>
+
+    <div>
+        <button onclick="window.print()" class="btn btn-dark rounded-pill px-4">
+            Print
+        </button>
+
+        <a href="/invoices/" class="btn btn-outline-dark rounded-pill px-4">
+            Back
+        </a>
+    </div>
+</div>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-info no-print">{{ message }}</div>
+    {% endfor %}
+{% endif %}
+
+<div class="card invoice-card shadow-sm border-0 rounded-4">
+    <div class="card-body p-4">
+
+        <div class="d-flex justify-content-between align-items-start mb-4">
+            <div>
+                <h2 class="fw-bold mb-1">Salon System</h2>
+                <small class="text-muted">Client Invoice</small>
+            </div>
+
+            <div class="text-end">
+                <h4 class="fw-bold mb-1">{{ invoice.invoice_number }}</h4>
+
+                {% if invoice.status == "Paid" %}
+                    <span class="badge bg-success">Paid</span>
+                {% elif invoice.status == "Unpaid" %}
+                    <span class="badge bg-danger">Unpaid</span>
+                {% else %}
+                    <span class="badge bg-secondary">Cancelled</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <hr>
+
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <h6 class="fw-bold">Bill To</h6>
+                <p class="mb-1">{{ invoice.client.name }}</p>
+                <p class="mb-1">{{ invoice.client.phone }}</p>
+                {% if invoice.client.email %}
+                    <p class="mb-1">{{ invoice.client.email }}</p>
+                {% endif %}
+            </div>
+
+            <div class="col-md-6 text-md-end">
+                <p class="mb-1"><strong>Invoice Date:</strong> {{ invoice.invoice_date }}</p>
+
+                {% if invoice.due_date %}
+                    <p class="mb-1"><strong>Due Date:</strong> {{ invoice.due_date }}</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-bordered align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>#</th>
+                        <th>Description</th>
+                        <th>Qty</th>
+                        <th>Unit Price</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for item in items %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ item.description }}</td>
+                            <td>{{ item.quantity }}</td>
+                            <td>KES {{ item.unit_price }}</td>
+                            <td>KES {{ item.total }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+
+                <tfoot>
+                    <tr>
+                        <th colspan="4" class="text-end">Grand Total</th>
+                        <th>KES {{ total }}</th>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        {% if invoice.notes %}
+            <div class="mt-4">
+                <h6 class="fw-bold">Notes</h6>
+                <p>{{ invoice.notes }}</p>
+            </div>
+        {% endif %}
+
+        <div class="mt-4 no-print">
+            {% if invoice.status == "Unpaid" %}
+                <a href="/invoices/paid/{{ invoice.id }}/" class="btn btn-success rounded-pill px-4">
+                    Mark Paid
+                </a>
+            {% endif %}
+
+            {% if invoice.status == "Paid" %}
+                <a href="/invoices/unpaid/{{ invoice.id }}/" class="btn btn-warning rounded-pill px-4">
+                    Mark Unpaid
+                </a>
+            {% endif %}
+
+            <a href="/invoices/delete/{{ invoice.id }}/"
+               class="btn btn-danger rounded-pill px-4"
+               onclick="return confirm('Delete this invoice?');">
+                Delete
+            </a>
+        </div>
+
+    </div>
+</div>
+
+{% endblock %}

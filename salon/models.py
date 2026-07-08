@@ -150,3 +150,44 @@ class Expense(models.Model):
 
     def __str__(self):
         return f"{self.expense_type} - {self.title} - {self.amount}"
+
+class Invoice(models.Model):
+    STATUS_CHOICES = [
+        ('Unpaid', 'Unpaid'),
+        ('Paid', 'Paid'),
+        ('Cancelled', 'Cancelled'),
+    ]
+
+    invoice_number = models.CharField(max_length=50, blank=True, null=True)
+    client = models.ForeignKey(Client, on_delete=models.CASCADE)
+    invoice_date = models.DateField()
+    due_date = models.DateField(blank=True, null=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Unpaid')
+    notes = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def total_amount(self):
+        return sum(item.total() for item in self.items.all())
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+
+        if not self.invoice_number:
+            self.invoice_number = f"INV-{self.id:05d}"
+            super().save(update_fields=['invoice_number'])
+
+    def __str__(self):
+        return f"{self.invoice_number} - {self.client.name}"
+
+
+class InvoiceItem(models.Model):
+    invoice = models.ForeignKey(Invoice, on_delete=models.CASCADE, related_name='items')
+    description = models.CharField(max_length=200)
+    quantity = models.DecimalField(max_digits=10, decimal_places=2, default=1)
+    unit_price = models.DecimalField(max_digits=10, decimal_places=2)
+
+    def total(self):
+        return self.quantity * self.unit_price
+
+    def __str__(self):
+        return self.description
