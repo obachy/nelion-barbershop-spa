@@ -898,8 +898,17 @@ def public_staff_check_out(request, attendance_id):
 def payroll_report(request):
     today = date.today()
 
-    selected_month = int(request.GET.get('month', today.month))
-    selected_year = int(request.GET.get('year', today.year))
+    selected_month = int(request.GET.get('month') or today.month)
+    selected_year = int(request.GET.get('year') or today.year)
+
+    # Payroll always ends on 27th of selected month
+    period_end = date(selected_year, selected_month, 27)
+
+    # Payroll starts on 28th of previous month
+    if selected_month == 1:
+        period_start = date(selected_year - 1, 12, 28)
+    else:
+        period_start = date(selected_year, selected_month - 1, 28)
 
     payroll_rows = []
 
@@ -907,50 +916,67 @@ def payroll_report(request):
         completed_appointments = Appointment.objects.filter(
             staff=staff_member,
             status='Completed',
-            date__month=selected_month,
-            date__year=selected_year
+            date__range=[period_start, period_end]
         ).select_related('service')
 
         total_sales = Decimal('0')
-        total_commission = Decimal('0')
+        total_earning = Decimal('0')
 
         for appointment in completed_appointments:
             service_price = Decimal(str(appointment.service.price or 0))
             commission_percent = Decimal(str(appointment.service.commission_percent or 0))
             commission_amount = Decimal(str(appointment.service.commission_amount or 0))
 
-            # If fixed cash commission exists, use it.
-            # If cash commission is 0, calculate from percentage.
             if commission_amount > 0:
-                earned_commission = commission_amount
+                staff_earning = commission_amount
             else:
-                earned_commission = (service_price * commission_percent) / Decimal('100')
+                staff_earning = (service_price * commission_percent) / Decimal('100')
 
             total_sales += service_price
-            total_commission += earned_commission
+            total_earning += staff_earning
 
         total_penalties = StaffPenalty.objects.filter(
             staff=staff_member,
-            date__month=selected_month,
-            date__year=selected_year
+            date__range=[period_start, period_end]
         ).aggregate(total=Sum('amount'))['total'] or 0
 
         total_penalties = Decimal(str(total_penalties))
-        net_pay = total_commission - total_penalties
+        net_pay = total_earning - total_penalties
 
         payroll_rows.append({
             'staff': staff_member,
             'jobs': completed_appointments.count(),
             'total_sales': total_sales,
-            'total_commission': total_commission,
+            'total_earning': total_earning,
             'total_penalties': total_penalties,
             'net_pay': net_pay,
         })
+
+    months = [
+        (1, 'January'),
+        (2, 'February'),
+        (3, 'March'),
+        (4, 'April'),
+        (5, 'May'),
+        (6, 'June'),
+        (7, 'July'),
+        (8, 'August'),
+        (9, 'September'),
+        (10, 'October'),
+        (11, 'November'),
+        (12, 'December'),
+    ]
+
+    years = range(today.year - 2, today.year + 2)
 
     return render(request, 'payroll_report.html', {
         'payroll_rows': payroll_rows,
         'selected_month': selected_month,
         'selected_year': selected_year,
+        'months': months,
+        'years': years,
+        'period_start': period_start,
+        'period_end': period_end,
         'is_admin': is_admin(request.user),
         'is_staff': is_staff(request.user),
     })

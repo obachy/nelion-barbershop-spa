@@ -8,44 +8,47 @@
     <div>
         <h3 class="fw-bold mb-0">Payroll Report</h3>
         <small class="text-muted">
-            Total commission earned minus penalties
+            Payroll period: {{ period_start }} to {{ period_end }}
         </small>
     </div>
+</div>
 
-    <a href="/" class="btn btn-outline-dark rounded-pill px-4">
-        Dashboard
-    </a>
+<div class="alert alert-info rounded-4">
+    Payroll closes every <strong>27th</strong> of the month.
+    This report calculates staff earnings from
+    <strong>{{ period_start }}</strong> to <strong>{{ period_end }}</strong>.
 </div>
 
 <div class="card shadow-sm border-0 rounded-4 mb-4">
     <div class="card-body">
-        <form method="get" class="row g-3 align-items-end">
+        <form method="get" class="row g-2 align-items-end">
             <div class="col-md-4">
-                <label class="form-label fw-semibold">Month</label>
+                <label class="form-label fw-semibold">Payroll Ending Month</label>
                 <select name="month" class="form-select">
-                    <option value="1" {% if selected_month == 1 %}selected{% endif %}>January</option>
-                    <option value="2" {% if selected_month == 2 %}selected{% endif %}>February</option>
-                    <option value="3" {% if selected_month == 3 %}selected{% endif %}>March</option>
-                    <option value="4" {% if selected_month == 4 %}selected{% endif %}>April</option>
-                    <option value="5" {% if selected_month == 5 %}selected{% endif %}>May</option>
-                    <option value="6" {% if selected_month == 6 %}selected{% endif %}>June</option>
-                    <option value="7" {% if selected_month == 7 %}selected{% endif %}>July</option>
-                    <option value="8" {% if selected_month == 8 %}selected{% endif %}>August</option>
-                    <option value="9" {% if selected_month == 9 %}selected{% endif %}>September</option>
-                    <option value="10" {% if selected_month == 10 %}selected{% endif %}>October</option>
-                    <option value="11" {% if selected_month == 11 %}selected{% endif %}>November</option>
-                    <option value="12" {% if selected_month == 12 %}selected{% endif %}>December</option>
+                    {% for month_number, month_name in months %}
+                        <option value="{{ month_number }}"
+                            {% if selected_month == month_number %}selected{% endif %}>
+                            {{ month_name }}
+                        </option>
+                    {% endfor %}
                 </select>
             </div>
 
             <div class="col-md-4">
                 <label class="form-label fw-semibold">Year</label>
-                <input type="number" name="year" value="{{ selected_year }}" class="form-control">
+                <select name="year" class="form-select">
+                    {% for year in years %}
+                        <option value="{{ year }}"
+                            {% if selected_year == year %}selected{% endif %}>
+                            {{ year }}
+                        </option>
+                    {% endfor %}
+                </select>
             </div>
 
             <div class="col-md-4">
-                <button type="submit" class="btn btn-dark w-100 rounded-pill">
-                    Filter Payroll
+                <button type="submit" class="btn btn-dark w-100">
+                    View Payroll
                 </button>
             </div>
         </form>
@@ -54,7 +57,7 @@
 
 <div class="card shadow-sm border-0 rounded-4">
     <div class="card-header bg-dark text-white rounded-top-4">
-        <strong>Payroll Summary</strong>
+        <strong>Staff Earnings</strong>
     </div>
 
     <div class="card-body p-0">
@@ -65,8 +68,8 @@
                         <th>#</th>
                         <th>Staff</th>
                         <th>Completed Jobs</th>
-                        <th>Total Sales</th>
-                        <th>Commission Earned</th>
+                        <th>Total Sales Done</th>
+                        <th>Total Earning</th>
                         <th>Penalties</th>
                         <th>Net Pay</th>
                     </tr>
@@ -79,14 +82,14 @@
                             <td class="fw-semibold">{{ row.staff.name }}</td>
                             <td>{{ row.jobs }}</td>
                             <td>KES {{ row.total_sales }}</td>
-                            <td class="text-success fw-semibold">KES {{ row.total_commission }}</td>
-                            <td class="text-danger fw-semibold">KES {{ row.total_penalties }}</td>
+                            <td class="fw-bold text-success">KES {{ row.total_earning }}</td>
+                            <td class="text-danger">KES {{ row.total_penalties }}</td>
                             <td class="fw-bold">KES {{ row.net_pay }}</td>
                         </tr>
                     {% empty %}
                         <tr>
                             <td colspan="7" class="text-center text-muted py-4">
-                                No payroll records found.
+                                No staff payroll records found.
                             </td>
                         </tr>
                     {% endfor %}
