@@ -1,6 +1,6 @@
-{% extends "base.html" %}
+name{% extends "base.html" %}
 
-{% block title %}Add Service - Salon System{% endblock %}
+{% block title %}Add Service - Buzz Cloud{% endblock %}
 
 {% block content %}
 
@@ -28,6 +28,16 @@
                         <input type="text" name="name" class="form-control" placeholder="Example: Hair Styling" required>
                     </div>
 
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Department</label>
+                        <select name="department" class="form-select"></select>
+                            <option value="">Select Department</option>
+                            {% for department in departments %}
+                                option value="{{ department.id }}">{{ department.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Service Price</label>
                         <input type="number" name="price" class="form-control" placeholder="Example: 500" min="0" step="0.01" required>

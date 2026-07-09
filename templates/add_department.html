@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Add Department - Buzz Cloud{% endblock %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h3 class="fw-bold mb-0">Add Department</h3>
+        <small class="text-muted">Create a new business department</small>
+    </div>
+
+    <a href="/departments/" class="btn btn-outline-dark rounded-pill px-4">
+        View Departments
+    </a>
+</div>
+
+<div class="card shadow-sm border-0 rounded-4">
+    <div class="card-body p-4">
+        <form method="post">
+            {% csrf_token %}
+
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Department Name</label>
+                <input type="text" name="name" class="form-control" placeholder="Example: Spa" required>
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label fw-semibold">Description</label>
+                <textarea name="description" class="form-control" rows="3" placeholder="Optional description"></textarea>
+            </div>
+
+            <button type="submit" class="btn btn-dark rounded-pill px-4">
+                Save Department
+            </button>
+
+            <a href="/departments/" class="btn btn-outline-secondary rounded-pill px-4 ms-2">
+                Cancel
+            </a>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
