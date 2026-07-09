@@ -26,6 +26,7 @@ from .models import (
     Expense,
     Invoice,
     InvoiceItem,
+    Department,
 
 )
 
@@ -308,6 +309,7 @@ def services_list(request):
 @login_required
 def add_service(request):
     staff_list = Staff.objects.all().order_by('name')
+    departments = Department.objects.all().order_by('name')
 
     if request.method == 'POST':
         name = request.POST.get('name')
@@ -324,6 +326,7 @@ def add_service(request):
             commission_amount = (price * commission_percent) / Decimal('100')
 
         service = Service.objects.create(
+            department_id=request.POST.get('department') or None,
             name=name,
             price=price,
             duration=duration,
@@ -338,6 +341,9 @@ def add_service(request):
 
     return render(request, 'add_service.html', {
         'staff_list': staff_list,
+        'departments': departments,
+        'is_admin': is_admin(request.user),
+        'is_staff': is_staff(request.user),
     })
 
 @login_required
@@ -1184,3 +1190,65 @@ def delete_invoice(request, invoice_id):
     invoice.delete()
     messages.success(request, "Invoice deleted.")
     return redirect('/invoices/')
+
+@login_required
+@user_passes_test(is_admin)
+def departments_list(request):
+    departments = Department.objects.all().order_by('name')
+
+    return render(request, 'departments.html', {
+        'departments': departments,
+        'is_admin': is_admin(request.user),
+        'is_staff': is_staff(request.user),
+    })
+
+
+@login_required
+@user_passes_test(is_admin)
+def add_department(request):
+    if request.method == 'POST':
+        name = request.POST.get('name')
+        description = request.POST.get('description')
+
+        if name:
+            Department.objects.get_or_create(
+                name=name,
+                defaults={'description': description}
+            )
+            messages.success(request, "Department added successfully.")
+
+        return redirect('/departments/')
+
+    return render(request, 'add_department.html', {
+        'is_admin': is_admin(request.user),
+        'is_staff': is_staff(request.user),
+    })
+
+@login_required
+@user_passes_test(is_admin)
+def edit_department(request, department_id):
+    department = get_object_or_404(Department, id=department_id)
+
+    if request.method == 'POST':
+        department.name = request.POST.get('name')
+        department.description = request.POST.get('description')
+        department.save()
+
+        messages.success(request, "Department updated successfully.")
+        return redirect('/departments/')
+
+    return render(request, 'edit_department.html', {
+        'department': department,
+        'is_admin': is_admin(request.user),
+        'is_staff': is_staff(request.user),
+    })
+
+
+@login_required
+@user_passes_test(is_admin)
+def delete_department(request, department_id):
+    department = get_object_or_404(Department, id=department_id)
+    department.delete()
+
+    messages.success(request, "Department deleted successfully.")
+    return redirect('/departments/')
