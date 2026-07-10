@@ -307,6 +307,7 @@ def services_list(request):
     return render(request, 'services.html', {'services': services})
 
 @login_required
+@user_passes_test(is_admin)
 def add_service(request):
     staff_list = Staff.objects.all().order_by('name')
     departments = Department.objects.all().order_by('name')
@@ -319,14 +320,14 @@ def add_service(request):
         commission_percent = Decimal(str(request.POST.get('commission_percent') or 0))
         commission_amount = Decimal(str(request.POST.get('commission_amount') or 0))
 
+        department_id = request.POST.get('department') or None
         staff_ids = request.POST.getlist('staff')
 
-        # If cash commission is empty/0, calculate it from percentage
         if commission_amount == 0 and commission_percent > 0:
             commission_amount = (price * commission_percent) / Decimal('100')
 
         service = Service.objects.create(
-            department_id=request.POST.get('department') or None,
+            department_id=department_id,
             name=name,
             price=price,
             duration=duration,
@@ -386,34 +387,46 @@ def staff_attendance_list(request):
 @user_passes_test(is_admin_or_staff)
 def staff_check_in(request, staff_id):
     staff = get_object_or_404(Staff, id=staff_id)
-    today = timezone.localdate()
-    now_time = timezone.localtime().time()
+
+    local_now = timezone.localtime(timezone.now())
+    today = local_now.date()
+    now_time = local_now.time()
+
+    late_limit = time(8, 30)  # 8:30 AM Kenya time
 
     attendance, created = StaffAttendance.objects.get_or_create(
         staff=staff,
         date=today,
         defaults={
-            'check_in': now_time
+            'check_in': now_time,
+            'is_late': now_time > late_limit,
         }
     )
 
     if created:
-        late_limit = OFFICIAL_START_TIME
-
-        if now_time > late_limit:
-            attendance.is_late = True
-            attendance.save()
-
+        if attendance.is_late:
             StaffPenalty.objects.get_or_create(
                 staff=staff,
                 attendance=attendance,
                 defaults={
-                    'amount': LATE_PENALTY_AMOUNT,
+                    'amount': 50,
                     'reason': 'Late arrival after 8:30 AM',
                 }
             )
 
-    return redirect('staff_attendance')
+            messages.warning(
+                request,
+                f"{staff.name} checked in late at {now_time.strftime('%I:%M %p')}."
+            )
+        else:
+            messages.success(
+                request,
+                f"{staff.name} checked in on time at {now_time.strftime('%I:%M %p')}."
+            )
+    else:
+        messages.info(request, f"{staff.name} already checked in today.")
+
+    return redirect('/staff/attendance/')
    
 @login_required
 @user_passes_test(is_admin_or_staff)
@@ -611,36 +624,7 @@ def walk_in_customer(request):
         'services': services,
         'staff': staff
     })
-@login_required
-def add_service(request):
-    staff_list = Staff.objects.all()
 
-    if request.method == 'POST':
-        name = request.POST.get('name')
-        price = Decimal(str(request.POST.get('price') or 0))
-        duration = request.POST.get('duration') or 0
-        commission_percent = Decimal(str(request.POST.get('commission_percent') or 0))
-        commission_amount = Decimal(str(request.POST.get('commission_amount') or 0))
-        staff_ids = request.POST.getlist('staff')
-
-        if commission_amount == 0 and commission_percent > 0:
-            commission_amount = (price * commission_percent) / Decimal('100')
-
-        service = Service.objects.create(
-            name=name,
-            price=price,
-            duration=duration,
-            commission_percent=commission_percent,
-            commission_amount=commission_amount
-        )
-
-        service.staff.set(staff_ids)
-
-        return redirect('/services/')
-
-    return render(request, 'add_service.html', {
-        'staff_list': staff_list
-    })
 @login_required
 @user_passes_test(is_admin)
 def staff_work_history(request):
@@ -850,26 +834,27 @@ def public_staff_attendance(request):
         'today': today,
     })
 
-
 def public_staff_check_in(request, staff_id):
     if request.method == 'POST':
         staff = get_object_or_404(Staff, id=staff_id)
-        today = timezone.localdate()
-        now_time = timezone.localtime().time()
+
+        local_now = timezone.localtime(timezone.now())
+        today = local_now.date()
+        now_time = local_now.time()
+
+        late_limit = time(8, 30)  # 8:30 AM Kenya time
 
         attendance, created = StaffAttendance.objects.get_or_create(
             staff=staff,
             date=today,
-            defaults={'check_in': now_time}
+            defaults={
+                'check_in': now_time,
+                'is_late': now_time > late_limit,
+            }
         )
 
         if created:
-            late_limit = time(8, 30)
-
-            if now_time > late_limit:
-                attendance.is_late = True
-                attendance.save()
-
+            if attendance.is_late:
                 StaffPenalty.objects.get_or_create(
                     staff=staff,
                     attendance=attendance,
@@ -879,7 +864,15 @@ def public_staff_check_in(request, staff_id):
                     }
                 )
 
-            messages.success(request, f"{staff.name} checked in successfully.")
+                messages.warning(
+                    request,
+                    f"{staff.name} checked in late at {now_time.strftime('%I:%M %p')}."
+                )
+            else:
+                messages.success(
+                    request,
+                    f"{staff.name} checked in on time at {now_time.strftime('%I:%M %p')}."
+                )
         else:
             messages.info(request, f"{staff.name} already checked in today.")
 
