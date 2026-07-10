@@ -352,6 +352,8 @@ def add_service(request):
 def delete_service(request, service_id):
     service = get_object_or_404(Service, id=service_id)
     service.delete()
+
+    messages.success(request, "Service deleted successfully.")
     return redirect('/services/')
 
 # ======================
@@ -437,23 +439,6 @@ def staff_check_out(request, attendance_id):
 
     return redirect('staff_attendance')
 
-@login_required
-@user_passes_test(is_admin)
-def edit_service(request, service_id):
-    service = get_object_or_404(Service, id=service_id)
-
-    if request.method == 'POST':
-        form = ServiceForm(request.POST, instance=service)
-        if form.is_valid():
-            form.save()
-            return redirect('/services/')
-    else:
-        form = ServiceForm(instance=service)
-
-    return render(request, 'add_form.html', {
-        'form': form,
-        'title': 'Edit Service'
-    })
 
 @csrf_protect
 def client_booking(request):
@@ -1245,3 +1230,47 @@ def delete_department(request, department_id):
 
     messages.success(request, "Department deleted successfully.")
     return redirect('/departments/')
+
+@login_required
+@user_passes_test(is_admin_or_staff)
+def services_list(request):
+    services = Service.objects.select_related('department').all().order_by('name')
+
+    return render(request, 'services.html', {
+        'services': services,
+        'is_admin': is_admin(request.user),
+        'is_staff': is_staff(request.user),
+    })
+
+
+@login_required
+@user_passes_test(is_admin)
+def edit_service(request, service_id):
+    service = get_object_or_404(Service, id=service_id)
+    staff_list = Staff.objects.all().order_by('name')
+    departments = Department.objects.all().order_by('name')
+
+    if request.method == 'POST':
+        service.department_id = request.POST.get('department') or None
+        service.name = request.POST.get('name')
+        service.price = Decimal(str(request.POST.get('price') or 0))
+        service.duration = int(request.POST.get('duration') or 0)
+        service.commission_percent = Decimal(str(request.POST.get('commission_percent') or 0))
+        service.commission_amount = Decimal(str(request.POST.get('commission_amount') or 0))
+
+        if service.commission_amount == 0 and service.commission_percent > 0:
+            service.commission_amount = (service.price * service.commission_percent) / Decimal('100')
+
+        service.save()
+        service.staff.set(request.POST.getlist('staff'))
+
+        messages.success(request, "Service updated successfully.")
+        return redirect('/services/')
+
+    return render(request, 'edit_service.html', {
+        'service': service,
+        'staff_list': staff_list,
+        'departments': departments,
+        'is_admin': is_admin(request.user),
+        'is_staff': is_staff(request.user),
+    })
