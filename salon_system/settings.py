@@ -36,6 +36,8 @@ ALLOWED_HOSTS = [
 
 CSRF_TRUSTED_ORIGINS = [
     "http://45.91.169.146:8001",
+    "http://45.91.169.146:8003",
+
 ]
 
 
