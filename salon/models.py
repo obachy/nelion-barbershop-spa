@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.auth.models import User
 
 
 # =========================
@@ -19,6 +20,13 @@ class Client(models.Model):
 # =========================
 
 class Staff(models.Model):
+    user = models.OneToOneField(
+        User,
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        related_name='staff_profile'
+    )
     name = models.CharField(max_length=100)
     phone = models.CharField(max_length=20)
     commission = models.IntegerField(default=0)

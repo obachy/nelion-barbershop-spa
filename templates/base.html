@@ -185,7 +185,9 @@
         <a href="/appointments/">📅 Appointments</a>
         <a href="/clients/">👥 Clients</a>
         <a href="/services/">💼 Services</a>
+        {% if is_admin %}
         <a href="/invoices/">🧾 Invoices</a>
+        {% endif %}
 
         {% if is_admin %}
             <a href="/departments/">🏢 Departments</a>
@@ -198,11 +200,16 @@
         {% endif %}
 
         {% if is_admin %}
+            <a href="/departments/">🏢 Departments</a>
+            <a href="/users/">👤 Users</a>
+            <a href="/users/add/">➕ Add User</a>
+            <a href="/add-service/">💇 Add Service</a>
+            <a href="/staff/">👩‍💼 Staff</a>
             <a href="/staff/commission/">💰 Commission</a>
             <a href="/staff/payroll/">🧾 Payroll</a>
             <a href="/expenses/">💸 Expenses & Bills</a>
+            <a href="/invoices/">🧾 Invoices</a>
             <a href="/staff/work-history/">📊 Work History</a>
-            <a href="/departments/">🏢 Departments</a>
         {% endif %}
 
         <a href="/logout/">🚪 Logout</a>
@@ -223,7 +230,9 @@
             <a href="/appointments/">📅 Appointments</a>
             <a href="/clients/">👥 Clients</a>
             <a href="/services/">💼 Services</a>
+            {% if is_admin %}
             <a href="/invoices/">🧾 Invoices</a>
+            {% endif %}
 
             {% if is_admin %}
                 <a href="/departments/">🏢 Departments</a>
@@ -236,11 +245,16 @@
             {% endif %}
 
             {% if is_admin %}
+                <a href="/departments/">🏢 Departments</a>
+                <a href="/users/">👤 Users</a>
+                <a href="/users/add/">➕ Add User</a>
+                <a href="/add-service/">💇 Add Service</a>
+                <a href="/staff/">👩‍💼 Staff</a>
                 <a href="/staff/commission/">💰 Commission</a>
                 <a href="/staff/payroll/">🧾 Payroll</a>
                 <a href="/expenses/">💸 Expenses & Bills</a>
+                <a href="/invoices/">🧾 Invoices</a>
                 <a href="/staff/work-history/">📊 Work History</a>
-                <a href="/departments/">🏢 Departments</a>
             {% endif %}
 
             <a href="/logout/">🚪 Logout</a>

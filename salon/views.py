@@ -1365,3 +1365,97 @@ def edit_service(request, service_id):
         'is_admin': is_admin(request.user),
         'is_staff': is_staff(request.user),
     })
+
+@login_required
+@user_passes_test(is_admin)
+def system_users_list(request):
+    users = User.objects.all().order_by('username')
+    return render(request, 'system_users.html', {
+        'users': users,
+        'is_admin': is_admin(request.user),
+        'is_staff': is_staff(request.user),
+    })
+
+
+@login_required
+@user_passes_test(is_admin)
+def create_system_user(request):
+    if request.method == 'POST':
+        username = request.POST.get('username', '').strip()
+        password = request.POST.get('password', '').strip()
+        confirm_password = request.POST.get('confirm_password', '').strip()
+        role = request.POST.get('role', '').strip()
+
+        if not username or not password or not role:
+            messages.error(request, "Please fill all required fields.")
+            return redirect('/users/add/')
+
+        if password != confirm_password:
+            messages.error(request, "Passwords do not match.")
+            return redirect('/users/add/')
+
+        if User.objects.filter(username=username).exists():
+            messages.error(request, "Username already exists.")
+            return redirect('/users/add/')
+
+        user = User.objects.create_user(username=username, password=password)
+
+        admin_group, _ = Group.objects.get_or_create(name='Admin')
+        staff_group, _ = Group.objects.get_or_create(name='Staff')
+
+        if role == 'Admin':
+            user.groups.add(admin_group)
+        else:
+            user.groups.add(staff_group)
+
+        user.is_staff = False
+        user.is_superuser = False
+        user.save()
+
+        messages.success(request, "User created successfully.")
+        return redirect('/users/')
+
+    return render(request, 'create_system_user.html', {
+        'is_admin': is_admin(request.user),
+        'is_staff': is_staff(request.user),
+    })
+
+
+@login_required
+@user_passes_test(is_admin)
+def delete_system_user(request, user_id):
+    user = get_object_or_404(User, id=user_id)
+
+    if user == request.user:
+        messages.error(request, "You cannot delete your own account.")
+        return redirect('/users/')
+
+    user.delete()
+    messages.success(request, "User deleted successfully.")
+    return redirect('/users/')
+
+
+@login_required
+@user_passes_test(is_admin)
+def reset_system_user_password(request, user_id):
+    system_user = get_object_or_404(User, id=user_id)
+
+    if request.method == 'POST':
+        password = request.POST.get('password', '').strip()
+        confirm_password = request.POST.get('confirm_password', '').strip()
+
+        if password != confirm_password:
+            messages.error(request, "Passwords do not match.")
+            return redirect(f'/users/reset-password/{system_user.id}/')
+
+        system_user.set_password(password)
+        system_user.save()
+
+        messages.success(request, "Password reset successfully.")
+        return redirect('/users/')
+
+    return render(request, 'reset_system_user_password.html', {
+        'system_user': system_user,
+        'is_admin': is_admin(request.user),
+        'is_staff': is_staff(request.user),
+    })
