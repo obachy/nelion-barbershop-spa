@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Staff - Buzz Cloud{% endblock %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h3 class="fw-bold mb-0">Edit Staff</h3>
+        <small class="text-muted">Update staff details</small>
+    </div>
+    <a href="/staff/" class="btn btn-outline-dark rounded-pill px-4">Back to Staff</a>
+</div>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-info">{{ message }}</div>
+    {% endfor %}
+{% endif %}
+
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card shadow-sm border-0 rounded-4">
+            <div class="card-body p-4">
+
+                <form method="post">
+                    {% csrf_token %}
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Staff Name</label>
+                        <input type="text" name="name" class="form-control" value="{{ staff_member.name }}" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Phone / Username</label>
+                        <input type="text" name="phone" class="form-control" value="{{ staff_member.phone }}" required>
+                        <small class="text-muted">This also updates the staff login username.</small>
+                    </div>
+
+                    <button type="submit" class="btn btn-dark rounded-pill px-4">
+                        Update Staff
+                    </button>
+
+                    <a href="/staff/" class="btn btn-outline-secondary rounded-pill px-4 ms-2">
+                        Cancel
+                    </a>
+                </form>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

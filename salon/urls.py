@@ -45,7 +45,9 @@ from .views import (
     system_users_list,
     create_system_user,
     delete_system_user,
-    reset_system_user_password
+    reset_system_user_password,
+    edit_staff,
+    delete_staff,
 )
 
 urlpatterns = [
@@ -103,4 +105,6 @@ urlpatterns = [
     path('users/add/', create_system_user, name='create_system_user'),
     path('users/delete/<int:user_id>/', delete_system_user, name='delete_system_user'),
     path('users/reset-password/<int:user_id>/', reset_system_user_password, name='reset_system_user_password'),
+    path('staff/edit/<int:staff_id>/', edit_staff, name='edit_staff'),
+    path('staff/delete/<int:staff_id>/', delete_staff, name='delete_staff'),
 ]

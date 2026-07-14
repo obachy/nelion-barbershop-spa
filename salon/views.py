@@ -324,7 +324,12 @@ def add_client(request):
 @user_passes_test(is_admin)
 def staff_list(request):
     staff = Staff.objects.all().order_by('name')
-    return render(request, 'staff.html', {'staff': staff})
+
+    return render(request, 'staff.html', {
+        'staff': staff,
+        'is_admin': is_admin(request.user),
+        'is_staff': is_staff(request.user),
+    })
 
 @login_required
 @user_passes_test(is_admin)
@@ -377,6 +382,53 @@ def add_staff(request):
         'is_admin': is_admin(request.user),
         'is_staff': is_staff(request.user),
     })
+
+@login_required
+@user_passes_test(is_admin)
+def edit_staff(request, staff_id):
+    staff_member = get_object_or_404(Staff, id=staff_id)
+
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        phone = request.POST.get('phone', '').strip()
+
+        if not name or not phone:
+            messages.error(request, "Name and phone are required.")
+            return redirect(f'/staff/edit/{staff_member.id}/')
+
+        staff_member.name = name
+        staff_member.phone = phone
+        staff_member.save()
+
+        if staff_member.user:
+            staff_member.user.first_name = name
+            staff_member.user.username = phone.replace(" ", "")
+            staff_member.user.save()
+
+        messages.success(request, "Staff updated successfully.")
+        return redirect('/staff/')
+
+    return render(request, 'edit_staff.html', {
+        'staff_member': staff_member,
+        'is_admin': is_admin(request.user),
+        'is_staff': is_staff(request.user),
+    })
+
+
+@login_required
+@user_passes_test(is_admin)
+def delete_staff(request, staff_id):
+    staff_member = get_object_or_404(Staff, id=staff_id)
+
+    linked_user = staff_member.user
+
+    staff_member.delete()
+
+    if linked_user and linked_user != request.user:
+        linked_user.delete()
+
+    messages.success(request, "Staff deleted successfully.")
+    return redirect('/staff/')
 
 # ======================
 # SERVICES
