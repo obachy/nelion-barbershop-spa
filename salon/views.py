@@ -1,5 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.models import User, Group
 from django.contrib.auth.views import LoginView
 from django.contrib.auth import logout
 from django.urls import reverse_lazy
@@ -188,6 +189,47 @@ def dashboard(request):
 
         if invoice.status == 'Unpaid':
              unpaid_invoice_total += invoice_total 
+    
+    staff_commission_total = Decimal('0')
+    commission_labels = []
+    commission_totals = []
+
+    if is_admin(request.user):
+        commission_staff_list = Staff.objects.all().order_by('name')
+    else:
+        staff_profile = Staff.objects.filter(user=request.user).first()
+
+        if staff_profile:
+            commission_staff_list = Staff.objects.filter(id=staff_profile.id)
+        else:
+            commission_staff_list = Staff.objects.none()
+            messages.error(request, "Your login account is not linked to a staff profile.")
+
+    for staff_member in commission_staff_list:
+        completed_appointments = Appointment.objects.filter(
+            staff=staff_member,
+            status='Completed'
+        ).select_related('service')
+
+        total_commission = Decimal('0')
+
+        for appointment in completed_appointments:
+            service_price = Decimal(str(appointment.service.price or 0))
+            commission_percent = Decimal(str(appointment.service.commission_percent or 0))
+            commission_amount = Decimal(str(appointment.service.commission_amount or 0))
+
+            if commission_amount > 0:
+                earned_commission = commission_amount
+            else:
+                earned_commission = (service_price * commission_percent) / Decimal('100')
+
+            total_commission += earned_commission
+
+        commission_labels.append(staff_member.name)
+        commission_totals.append(float(total_commission))
+
+        if not is_admin(request.user):
+            staff_commission_total = total_commission
 
     context = {
         'clients': Client.objects.count(),
@@ -216,6 +258,10 @@ def dashboard(request):
 
         'paid_invoice_total': paid_invoice_total,
         'unpaid_invoice_total': unpaid_invoice_total,
+
+        'staff_commission_total': staff_commission_total,
+        'commission_labels': commission_labels,
+        'commission_totals': commission_totals,
     }
 
     return render(request, 'dashboard.html', context)
@@ -281,19 +327,55 @@ def staff_list(request):
     return render(request, 'staff.html', {'staff': staff})
 
 @login_required
-@user_passes_test(is_admin_or_staff)
+@user_passes_test(is_admin)
 def add_staff(request):
     if request.method == 'POST':
-        form = StaffForm(request.POST)
-        if form.is_valid():
-            form.save()
-            return redirect('/staff/')
-    else:
-        form = StaffForm()
+        name = request.POST.get('name', '').strip()
+        phone = request.POST.get('phone', '').strip()
+        password = request.POST.get('password', '').strip()
+        confirm_password = request.POST.get('confirm_password', '').strip()
 
-    return render(request, 'add_form.html', {
-        'form': form,
-        'title': 'Add Staff'
+        if not name or not phone or not password:
+            messages.error(request, "Name, phone and password are required.")
+            return redirect('/staff/add/')
+
+        if password != confirm_password:
+            messages.error(request, "Passwords do not match.")
+            return redirect('/staff/add/')
+
+        username = phone.replace(" ", "")
+
+        if User.objects.filter(username=username).exists():
+            messages.error(request, "A user with this phone number already exists.")
+            return redirect('/staff/add/')
+
+        user = User.objects.create_user(
+            username=username,
+            password=password,
+            first_name=name
+        )
+
+        staff_group, created = Group.objects.get_or_create(name='Staff')
+        user.groups.add(staff_group)
+        user.is_staff = False
+        user.is_superuser = False
+        user.save()
+
+        Staff.objects.create(
+            user=user,
+            name=name,
+            phone=phone
+        )
+
+        messages.success(
+            request,
+            f"Staff created successfully. Username: {username}"
+        )
+        return redirect('/staff/')
+
+    return render(request, 'add_staff.html', {
+        'is_admin': is_admin(request.user),
+        'is_staff': is_staff(request.user),
     })
 
 # ======================
@@ -367,34 +449,54 @@ LATE_PENALTY_AMOUNT = 50
 @login_required
 @user_passes_test(is_admin_or_staff)
 def staff_attendance_list(request):
-    today = timezone.localdate()
+    local_now = timezone.localtime(timezone.now())
+    today = local_now.date()
 
-    staff_list = Staff.objects.all()
+    if is_admin(request.user):
+        staff_list = Staff.objects.all().order_by('name')
+    else:
+        staff_profile = Staff.objects.filter(user=request.user).first()
 
-    # Get today's attendance
-    attendances = StaffAttendance.objects.filter(date=today)
+        if staff_profile:
+            staff_list = Staff.objects.filter(id=staff_profile.id)
+        else:
+            staff_list = Staff.objects.none()
+            messages.error(request, "Your login account is not linked to a staff profile. Contact admin.")
 
-    # Build dictionary: {staff_id: attendance_object}
-    attendance_map = {a.staff_id: a for a in attendances}
+    rows = []
 
-    context = {
-        'staff_list': staff_list,
-        'attendance_map': attendance_map,
+    for staff_member in staff_list:
+        attendance = StaffAttendance.objects.filter(
+            staff=staff_member,
+            date=today
+        ).first()
+
+        rows.append({
+            'staff': staff_member,
+            'attendance': attendance,
+        })
+
+    return render(request, 'staff_attendance.html', {
+        'rows': rows,
         'today': today,
-    }
-
-    return render(request, 'staff_attendance.html', context)
+        'is_admin': is_admin(request.user),
+        'is_staff': is_staff(request.user),
+    })
 
 @login_required
 @user_passes_test(is_admin_or_staff)
 def staff_check_in(request, staff_id):
     staff = get_object_or_404(Staff, id=staff_id)
 
+    if is_staff(request.user) and staff.user != request.user:
+        messages.error(request, "You can only check in your own account.")
+        return redirect('/staff/attendance/')
+
     local_now = timezone.localtime(timezone.now())
     today = local_now.date()
     now_time = local_now.time()
 
-    late_limit = time(8, 30)  # 8:30 AM Kenya time
+    late_limit = time(8, 30)
 
     attendance, created = StaffAttendance.objects.get_or_create(
         staff=staff,
@@ -415,16 +517,9 @@ def staff_check_in(request, staff_id):
                     'reason': 'Late arrival after 8:30 AM',
                 }
             )
-
-            messages.warning(
-                request,
-                f"{staff.name} checked in late at {now_time.strftime('%I:%M %p')}."
-            )
+            messages.warning(request, f"{staff.name} checked in late.")
         else:
-            messages.success(
-                request,
-                f"{staff.name} checked in on time at {now_time.strftime('%I:%M %p')}."
-            )
+            messages.success(request, f"{staff.name} checked in on time.")
     else:
         messages.info(request, f"{staff.name} already checked in today.")
 
@@ -434,11 +529,19 @@ def staff_check_in(request, staff_id):
 @user_passes_test(is_admin_or_staff)
 def staff_check_out(request, attendance_id):
     attendance = get_object_or_404(StaffAttendance, id=attendance_id)
-    attendance.check_out = timezone.localtime().time()
-    attendance.save()
 
-    return redirect('staff_attendance')
+    if is_staff(request.user) and attendance.staff.user != request.user:
+        messages.error(request, "You can only check out your own account.")
+        return redirect('/staff/attendance/')
 
+    if attendance.check_out:
+        messages.info(request, f"{attendance.staff.name} already checked out.")
+    else:
+        attendance.check_out = timezone.localtime(timezone.now()).time()
+        attendance.save()
+        messages.success(request, f"{attendance.staff.name} checked out successfully.")
+
+    return redirect('/staff/attendance/')
 
 @csrf_protect
 def client_booking(request):
@@ -613,77 +716,65 @@ def walk_in_customer(request):
 @login_required
 @user_passes_test(is_admin)
 def staff_work_history(request):
+    from datetime import date
+
     today = date.today()
 
-    selected_month = int(request.GET.get('month', today.month))
-    selected_year = int(request.GET.get('year', today.year))
+    selected_month = int(request.GET.get('month') or today.month)
+    selected_year = int(request.GET.get('year') or today.year)
+    staff_id = request.GET.get('staff')
 
-    staff_reports = []
+    appointments = Appointment.objects.filter(
+        status='Completed',
+        date__month=selected_month,
+        date__year=selected_year
+    ).select_related('client', 'service', 'staff').order_by('-date', '-time')
+
+    if staff_id:
+        appointments = appointments.filter(staff_id=staff_id)
+
+    work_rows = []
+
+    for appointment in appointments:
+        service_price = Decimal(str(appointment.service.price or 0))
+        commission_percent = Decimal(str(appointment.service.commission_percent or 0))
+        commission_amount = Decimal(str(appointment.service.commission_amount or 0))
+
+        if commission_amount > 0:
+            earned_commission = commission_amount
+        else:
+            earned_commission = (service_price * commission_percent) / Decimal('100')
+
+        work_rows.append({
+            'appointment': appointment,
+            'staff': appointment.staff,
+            'client': appointment.client,
+            'service': appointment.service,
+            'service_price': service_price,
+            'commission': earned_commission,
+        })
 
     staff_list = Staff.objects.all().order_by('name')
 
-    for staff in staff_list:
-        completed_appointments = Appointment.objects.filter(
-            staff=staff,
-            status='Completed',
-            date__month=selected_month,
-            date__year=selected_year
-        ).select_related('client', 'service').order_by('date', 'time')
+    months = [
+        (1, 'January'), (2, 'February'), (3, 'March'),
+        (4, 'April'), (5, 'May'), (6, 'June'),
+        (7, 'July'), (8, 'August'), (9, 'September'),
+        (10, 'October'), (11, 'November'), (12, 'December'),
+    ]
 
-        work_items = []
-        daily_totals = {}
-
-        month_total_sales = Decimal('0')
-        month_total_commission = Decimal('0')
-
-        for appointment in completed_appointments:
-            service_price = Decimal(str(appointment.service.price or 0))
-            commission_percent = Decimal(str(appointment.service.commission_percent or 0))
-            commission_amount = Decimal(str(appointment.service.commission_amount or 0))
-
-            # If fixed commission amount is not set, calculate from percentage
-            if commission_amount == 0 and commission_percent > 0:
-                commission_amount = (service_price * commission_percent) / Decimal('100')
-
-            work_items.append({
-                'date': appointment.date,
-                'time': appointment.time,
-                'client': appointment.client.name,
-                'service': appointment.service.name,
-                'sales': service_price,
-                'commission_percent': commission_percent,
-                'commission_amount': commission_amount,
-            })
-
-            day_key = appointment.date
-
-            if day_key not in daily_totals:
-                daily_totals[day_key] = {
-                    'jobs': 0,
-                    'sales': Decimal('0'),
-                    'commission': Decimal('0'),
-                }
-
-            daily_totals[day_key]['jobs'] += 1
-            daily_totals[day_key]['sales'] += service_price
-            daily_totals[day_key]['commission'] += commission_amount
-
-            month_total_sales += service_price
-            month_total_commission += commission_amount
-
-        staff_reports.append({
-            'staff': staff,
-            'work_items': work_items,
-            'daily_totals': daily_totals,
-            'month_jobs': completed_appointments.count(),
-            'month_total_sales': month_total_sales,
-            'month_total_commission': month_total_commission,
-        })
+    years = range(today.year - 2, today.year + 2)
 
     return render(request, 'staff_work_history.html', {
-        'staff_reports': staff_reports,
+        'work_rows': work_rows,
+        'staff_list': staff_list,
+        'selected_staff': staff_id,
         'selected_month': selected_month,
         'selected_year': selected_year,
+        'months': months,
+        'years': years,
+        'is_admin': is_admin(request.user),
+        'is_staff': is_staff(request.user),
     })
 
 @login_required
