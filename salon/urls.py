@@ -94,4 +94,5 @@ urlpatterns = [
     path('departments/add/', add_department, name='add_department'),
     path('departments/edit/<int:department_id>/', edit_department, name='edit_department'),
     path('departments/delete/<int:department_id>/', delete_department, name='delete_department'),
+    path('staff/add/', add_staff, name='add_staff'),
 ]
