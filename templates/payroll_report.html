@@ -67,8 +67,14 @@
                     <tr>
                         <th>#</th>
                         <th>Staff</th>
-                        <th>Completed Jobs</th>
-                        <th>Total Sales Done</th>
+                        <th>Total Jobs</th>
+                        <th>Appointment Jobs</th>
+                        <th>Quick Tasks</th>
+                        <th>Appointment Sales</th>
+                        <th>Quick Task Sales</th>
+                        <th>Total Sales</th>
+                        <th>Appointment Commission</th>
+                        <th>Quick Task Commission</th>
                         <th>Total Earning</th>
                         <th>Penalties</th>
                         <th>Net Pay</th>
@@ -79,21 +85,66 @@
                     {% for row in payroll_rows %}
                         <tr>
                             <td>{{ forloop.counter }}</td>
-                            <td class="fw-semibold">{{ row.staff.name }}</td>
-                            <td>{{ row.jobs }}</td>
-                            <td>KES {{ row.total_sales }}</td>
-                            <td class="fw-bold text-success">KES {{ row.total_earning }}</td>
-                            <td class="text-danger">KES {{ row.total_penalties }}</td>
-                            <td class="fw-bold">KES {{ row.net_pay }}</td>
+
+                            <td class="fw-semibold">
+                                {{ row.staff.name }}
+                            </td>
+
+                            <td>
+                                <span class="badge bg-dark">
+                                    {{ row.jobs }}
+                                </span>
+                            </td>
+
+                            <td>
+                                {{ row.appointment_jobs }}
+                            </td>
+
+                            <td>
+                                {{ row.quick_task_jobs }}
+                            </td>
+
+                            <td>
+                                KES {{ row.appointment_sales_total }}
+                            </td>
+
+                            <td>
+                                KES {{ row.quick_task_sales_total }}
+                            </td>
+
+                            <td class="fw-semibold">
+                                KES {{ row.total_sales }}
+                            </td>
+
+                            <td>
+                                KES {{ row.appointment_commission_total }}
+                            </td>
+
+                            <td>
+                                KES {{ row.quick_task_commission_total }}
+                            </td>
+
+                            <td class="fw-bold text-success">
+                                KES {{ row.total_earning }}
+                            </td>
+
+                            <td class="text-danger">
+                                KES {{ row.total_penalties }}
+                            </td>
+
+                            <td class="fw-bold">
+                                KES {{ row.net_pay }}
+                            </td>
                         </tr>
                     {% empty %}
                         <tr>
-                            <td colspan="7" class="text-center text-muted py-4">
+                            <td colspan="13" class="text-center text-muted py-4">
                                 No staff payroll records found.
                             </td>
                         </tr>
                     {% endfor %}
                 </tbody>
+
             </table>
         </div>
     </div>

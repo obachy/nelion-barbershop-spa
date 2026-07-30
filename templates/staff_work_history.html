@@ -7,7 +7,7 @@
 <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4">
     <div>
         <h3 class="fw-bold mb-0">Staff Work History</h3>
-        <small class="text-muted">Completed appointments and staff commission history</small>
+        <small class="text-muted">Completed appointments and quick tasks</small>
     </div>
 </div>
 
@@ -74,8 +74,10 @@
                         <th>Date</th>
                         <th>Time</th>
                         <th>Staff</th>
+                        <th>Type</th>
                         <th>Client</th>
-                        <th>Service</th>
+                        <th>Phone</th>
+                        <th>Task / Service</th>
                         <th>Sale Amount</th>
                         <th>Commission</th>
                     </tr>
@@ -85,22 +87,54 @@
                     {% for row in work_rows %}
                         <tr>
                             <td>{{ forloop.counter }}</td>
-                            <td>{{ row.appointment.date }}</td>
-                            <td>{{ row.appointment.time }}</td>
-                            <td class="fw-semibold">{{ row.staff.name }}</td>
-                            <td>{{ row.client.name }}</td>
-                            <td>{{ row.service.name }}</td>
-                            <td>KES {{ row.service_price }}</td>
-                            <td class="fw-bold text-success">KES {{ row.commission }}</td>
+                            <td>{{ row.date }}</td>
+                            <td>{{ row.time }}</td>
+
+                            <td class="fw-semibold">
+                                {{ row.staff.name }}
+                            </td>
+
+                            <td>
+                                {% if row.work_type == "Quick Task" %}
+                                    <span class="badge bg-primary">Quick Task</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Appointment</span>
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                {{ row.client_name }}
+                            </td>
+
+                            <td>
+                                {% if row.client_phone %}
+                                    {{ row.client_phone }}
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                {{ row.task_name }}
+                            </td>
+
+                            <td>
+                                KES {{ row.sale_amount }}
+                            </td>
+
+                            <td class="fw-bold text-success">
+                                KES {{ row.commission }}
+                            </td>
                         </tr>
                     {% empty %}
                         <tr>
-                            <td colspan="8" class="text-center text-muted py-4">
+                            <td colspan="10" class="text-center text-muted py-4">
                                 No completed work found for this period.
                             </td>
                         </tr>
                     {% endfor %}
                 </tbody>
+
             </table>
         </div>
     </div>

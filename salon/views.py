@@ -45,13 +45,51 @@ from .forms import (
 # ======================
 
 def is_admin(user):
-    return user.groups.filter(name='Admin').exists()
+    return user.is_authenticated and (
+        user.is_superuser or user.groups.filter(name='Admin').exists()
+    )
+
 
 def is_staff(user):
-    return user.groups.filter(name='Staff').exists()
+    return user.is_authenticated and user.groups.filter(name='Staff').exists()
+
+
+def is_manager(user):
+    return user.is_authenticated and user.groups.filter(name='Manager').exists()
+
 
 def is_admin_or_staff(user):
-    return user.groups.filter(name__in=['Admin', 'Staff']).exists()
+    return user.is_authenticated and (
+        user.is_superuser
+        or user.groups.filter(name='Admin').exists()
+        or user.groups.filter(name='Staff').exists()
+    )
+
+
+def is_admin_or_manager(user):
+    return user.is_authenticated and (
+        user.is_superuser
+        or user.groups.filter(name='Admin').exists()
+        or user.groups.filter(name='Manager').exists()
+    )
+
+def get_staff_profile_for_user(user):
+    if not user.is_authenticated:
+        return None
+
+    staff_profile = Staff.objects.filter(user=user).first()
+
+    if staff_profile:
+        return staff_profile
+
+    staff_profile = Staff.objects.filter(phone=user.username).first()
+
+    if staff_profile:
+        staff_profile.user = user
+        staff_profile.save()
+        return staff_profile
+
+    return None
 
 # ======================
 # LOGIN
@@ -61,12 +99,7 @@ class RoleBasedLoginView(LoginView):
     template_name = 'login.html'
 
     def get_success_url(self):
-        user = self.request.user
-        if is_admin(user):
-            return reverse_lazy('dashboard')
-        if is_staff(user):
-            return reverse_lazy('dashboard')
-        return reverse_lazy('login')
+        return reverse_lazy('dashboard')
 
 # ======================
 # DASHBOARD
@@ -137,10 +170,11 @@ def dashboard(request):
     staff_labels = []
     staff_jobs = []
 
-    if is_admin(request.user):
+    if is_admin(request.user) or is_manager(request.user):
         performance_staff_list = Staff.objects.all().order_by('name')
     else:
-        staff_profile = Staff.objects.filter(user=request.user).first()
+        staff_profile = get_staff_profile_for_user(request.user)
+
         if staff_profile:
             performance_staff_list = Staff.objects.filter(id=staff_profile.id)
         else:
@@ -188,10 +222,10 @@ def dashboard(request):
 
     month_start = today.replace(day=1)
 
-    if is_admin(request.user):
+    if is_admin(request.user) or is_manager(request.user):
         commission_staff_list = Staff.objects.all().order_by('name')
     else:
-        staff_profile = Staff.objects.filter(user=request.user).first()
+        staff_profile = get_staff_profile_for_user(request.user)
 
         if staff_profile:
             commission_staff_list = Staff.objects.filter(id=staff_profile.id)
@@ -275,6 +309,7 @@ def dashboard(request):
         'staff_commission_total': staff_commission_total,
 
         'is_admin': is_admin(request.user),
+        'is_manager': is_manager(request.user),
         'is_staff': is_staff(request.user),
     }
 
@@ -513,21 +548,12 @@ GRACE_PERIOD_MINUTES = 10
 LATE_PENALTY_AMOUNT = 50
 
 @login_required
-@user_passes_test(is_admin_or_staff)
+@user_passes_test(is_admin_or_manager)
 def staff_attendance_list(request):
     local_now = timezone.localtime(timezone.now())
     today = local_now.date()
 
-    if is_admin(request.user):
-        staff_list = Staff.objects.all().order_by('name')
-    else:
-        staff_profile = Staff.objects.filter(user=request.user).first()
-
-        if staff_profile:
-            staff_list = Staff.objects.filter(id=staff_profile.id)
-        else:
-            staff_list = Staff.objects.none()
-            messages.error(request, "Your login account is not linked to a staff profile. Contact admin.")
+    staff_list = Staff.objects.all().order_by('name')
 
     rows = []
 
@@ -546,17 +572,14 @@ def staff_attendance_list(request):
         'rows': rows,
         'today': today,
         'is_admin': is_admin(request.user),
+        'is_manager': is_manager(request.user),
         'is_staff': is_staff(request.user),
     })
 
 @login_required
-@user_passes_test(is_admin_or_staff)
+@user_passes_test(is_admin_or_manager)
 def staff_check_in(request, staff_id):
     staff = get_object_or_404(Staff, id=staff_id)
-
-    if is_staff(request.user) and staff.user != request.user:
-        messages.error(request, "You can only check in your own account.")
-        return redirect('/staff/attendance/')
 
     local_now = timezone.localtime(timezone.now())
     today = local_now.date()
@@ -592,13 +615,9 @@ def staff_check_in(request, staff_id):
     return redirect('/staff/attendance/')
    
 @login_required
-@user_passes_test(is_admin_or_staff)
+@user_passes_test(is_admin_or_manager)
 def staff_check_out(request, attendance_id):
     attendance = get_object_or_404(StaffAttendance, id=attendance_id)
-
-    if is_staff(request.user) and attendance.staff.user != request.user:
-        messages.error(request, "You can only check out your own account.")
-        return redirect('/staff/attendance/')
 
     if attendance.check_out:
         messages.info(request, f"{attendance.staff.name} already checked out.")
@@ -1560,15 +1579,37 @@ def create_system_user(request):
         user = User.objects.create_user(username=username, password=password)
 
         admin_group, _ = Group.objects.get_or_create(name='Admin')
+        manager_group, _ = Group.objects.get_or_create(name='Manager')
         staff_group, _ = Group.objects.get_or_create(name='Staff')
 
         if role == 'Admin':
             user.groups.add(admin_group)
-        else:
-            user.groups.add(staff_group)
+            user.is_staff = True
+            user.is_superuser = False
 
-        user.is_staff = False
-        user.is_superuser = False
+        elif role == 'Manager':
+            user.groups.add(manager_group)
+            user.is_staff = False
+            user.is_superuser = False
+
+        elif role == 'Staff':
+            user.groups.add(staff_group)
+            user.is_staff = False
+            user.is_superuser = False
+
+            existing_staff = Staff.objects.filter(phone=username).first()
+
+            if existing_staff:
+                existing_staff.user = user
+                existing_staff.save()
+            else:
+                Staff.objects.create(
+                    user=user,
+                    name=username,
+                    phone=username
+                )
+
+        user.is_active = True
         user.save()
 
         messages.success(request, "User created successfully.")
@@ -1576,6 +1617,7 @@ def create_system_user(request):
 
     return render(request, 'create_system_user.html', {
         'is_admin': is_admin(request.user),
+        'is_manager': is_manager(request.user),
         'is_staff': is_staff(request.user),
     })
 
@@ -1653,10 +1695,9 @@ def quick_task_sale(request):
                     }
                 )
 
-                if not created:
-                    if client_name and client.name != client_name:
-                        client.name = client_name
-                        client.save()
+                if not created and client_name and client.name != client_name:
+                    client.name = client_name
+                    client.save()
             else:
                 Client.objects.get_or_create(
                     name=client_name,
@@ -1678,12 +1719,18 @@ def quick_task_sale(request):
             staff_member = Staff.objects.filter(id=staff_id).first()
 
             if staff_member:
+                commission_type = request.POST.get(f'commission_type_{staff_id}', 'amount')
                 commission_value = Decimal(str(request.POST.get(f'commission_{staff_id}') or 0))
+
+                if commission_type == 'percent':
+                    commission_amount = (sale_amount * commission_value) / Decimal('100')
+                else:
+                    commission_amount = commission_value
 
                 QuickTaskCommission.objects.create(
                     quick_task=quick_task,
                     staff=staff_member,
-                    commission_amount=commission_value
+                    commission_amount=commission_amount
                 )
 
         messages.success(request, "Quick task sale completed successfully.")

@@ -182,6 +182,7 @@
     <div class="collapse mobile-menu" id="mobileMenu">
         <a href="/">🏠 Dashboard</a>
         <a href="/walk-in/">🚶 Walk-in Customer</a>
+        <a href="/quick-task/">⚡ Quick Task</a>
         <a href="/appointments/">📅 Appointments</a>
         <a href="/clients/">👥 Clients</a>
         <a href="/services/">💼 Services</a>
@@ -195,7 +196,7 @@
             <a href="/staff/">👩‍💼 Staff</a>
         {% endif %}
 
-        {% if is_admin or is_staff %}
+        {% if is_admin or is_manager %}
             <a href="/staff/attendance/">🕒 Attendance</a>
         {% endif %}
 
@@ -227,6 +228,7 @@
 
             <a href="/">🏠 Dashboard</a>
             <a href="/walk-in/">🚶 Walk-in Customer</a>
+            <a href="/quick-task/">⚡ Quick Task</a>
             <a href="/appointments/">📅 Appointments</a>
             <a href="/clients/">👥 Clients</a>
             <a href="/services/">💼 Services</a>
@@ -240,7 +242,7 @@
                 <a href="/staff/">👩‍💼 Staff</a>
             {% endif %}
 
-            {% if is_admin or is_staff %}
+            {% if is_admin or is_manager %}
                 <a href="/staff/attendance/">🕒 Attendance</a>
             {% endif %}
 

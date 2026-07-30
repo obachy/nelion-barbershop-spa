@@ -213,3 +213,36 @@ class InvoiceItem(models.Model):
 
     def __str__(self):
         return self.description
+
+class QuickTaskSale(models.Model):
+    STATUS_CHOICES = [
+        ('Completed', 'Completed'),
+        ('Cancelled', 'Cancelled'),
+    ]
+
+    task_name = models.CharField(max_length=200)
+    client_name = models.CharField(max_length=100, blank=True, null=True)
+    client_phone = models.CharField(max_length=20, blank=True, null=True)
+    sale_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Completed')
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def total_commission(self):
+        return sum(item.commission_amount for item in self.staff_commissions.all())
+
+    def __str__(self):
+        return self.task_name
+
+
+class QuickTaskCommission(models.Model):
+    quick_task = models.ForeignKey(
+        QuickTaskSale,
+        on_delete=models.CASCADE,
+        related_name='staff_commissions'
+    )
+    staff = models.ForeignKey(Staff, on_delete=models.CASCADE)
+    commission_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+
+    def __str__(self):
+        return f"{self.staff.name} - {self.quick_task.task_name}"
