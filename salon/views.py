@@ -28,6 +28,8 @@ from .models import (
     Invoice,
     InvoiceItem,
     Department,
+    QuickTaskSale,
+    QuickTaskCommission,
 
 )
 
@@ -71,128 +73,120 @@ class RoleBasedLoginView(LoginView):
 # ======================
 
 @login_required
-@user_passes_test(is_admin_or_staff)
 def dashboard(request):
-    today = date.today()
+    today = timezone.localdate()
 
-    todays_revenue = Appointment.objects.filter(
-        date=today,
-        status='Completed'
+    # Today sales, including appointments + quick tasks
+    appointment_sales_today = Appointment.objects.filter(
+        status='Completed',
+        date=today
     ).aggregate(total=Sum('service__price'))['total'] or 0
 
-    # Staff performance this month
-    staff_performance = (
-        Appointment.objects.filter(
-            status='Completed',
-            date__month=today.month,
-            date__year=today.year
-        )
-        .values('staff__name')
-        .annotate(total_jobs=Count('id'))
-        .order_by('-total_jobs')
-    )
+    quick_task_sales_today = QuickTaskSale.objects.filter(
+        status='Completed',
+        created_at__date=today
+    ).aggregate(total=Sum('sale_amount'))['total'] or 0
 
-    staff_labels = []
-    staff_jobs = []
-
-    for item in staff_performance:
-        staff_labels.append(item['staff__name'] or 'Unknown')
-        staff_jobs.append(item['total_jobs'])
+    todays_revenue = Decimal(str(appointment_sales_today)) + Decimal(str(quick_task_sales_today))
 
     # Income per day this month
-    daily_income = (
-        Appointment.objects.filter(
-            status='Completed',
-            date__month=today.month,
-            date__year=today.year
-        )
-        .values('date')
-        .annotate(total_income=Sum('service__price'))
-        .order_by('date')
-    )
-
     daily_labels = []
     daily_sales = []
 
-    for item in daily_income:
-        daily_labels.append(item['date'].strftime('%d %b'))
-        daily_sales.append(float(item['total_income'] or 0))
+    for day in range(1, today.day + 1):
+        current_date = today.replace(day=day)
 
-    # Income per month this year
+        appointment_total = Appointment.objects.filter(
+            status='Completed',
+            date=current_date
+        ).aggregate(total=Sum('service__price'))['total'] or 0
+
+        quick_task_total = QuickTaskSale.objects.filter(
+            status='Completed',
+            created_at__date=current_date
+        ).aggregate(total=Sum('sale_amount'))['total'] or 0
+
+        total_income = Decimal(str(appointment_total)) + Decimal(str(quick_task_total))
+
+        daily_labels.append(current_date.strftime('%d %b'))
+        daily_sales.append(float(total_income))
+
+    # Monthly income
     monthly_labels = []
     monthly_sales = []
 
     for month in range(1, 13):
-        total = Appointment.objects.filter(
+        appointment_total = Appointment.objects.filter(
             status='Completed',
             date__month=month,
             date__year=today.year
         ).aggregate(total=Sum('service__price'))['total'] or 0
 
-        monthly_labels.append(date(today.year, month, 1).strftime('%b'))
-        monthly_sales.append(float(total))
+        quick_task_total = QuickTaskSale.objects.filter(
+            status='Completed',
+            created_at__month=month,
+            created_at__year=today.year
+        ).aggregate(total=Sum('sale_amount'))['total'] or 0
 
-            # Staff attendance this month
-    attendance_data = []
+        total_month_income = Decimal(str(appointment_total)) + Decimal(str(quick_task_total))
 
-    for staff_member in Staff.objects.all().order_by('name'):
-        present_days = StaffAttendance.objects.filter(
-            staff=staff_member,
-            date__month=today.month,
-            date__year=today.year
-        ).count()
+        monthly_labels.append(str(month))
+        monthly_sales.append(float(total_month_income))
 
-        attendance_data.append({
-            'staff': staff_member.name,
-            'days': present_days,
-        })
+    # Staff performance this month
+    staff_labels = []
+    staff_jobs = []
 
-    attendance_labels = [item['staff'] for item in attendance_data]
-    attendance_days = [item['days'] for item in attendance_data]
+    if is_admin(request.user):
+        performance_staff_list = Staff.objects.all().order_by('name')
+    else:
+        staff_profile = Staff.objects.filter(user=request.user).first()
+        if staff_profile:
+            performance_staff_list = Staff.objects.filter(id=staff_profile.id)
+        else:
+            performance_staff_list = Staff.objects.none()
 
-
-    # Staff commission this month
-    commission_labels = []
-    commission_totals = []
-
-    for staff_member in Staff.objects.all().order_by('name'):
-        completed_appointments = Appointment.objects.filter(
+    for staff_member in performance_staff_list:
+        appointment_jobs = Appointment.objects.filter(
             staff=staff_member,
             status='Completed',
             date__month=today.month,
             date__year=today.year
-        ).select_related('service')
+        ).count()
 
-        total_commission = Decimal('0')
+        quick_task_jobs = QuickTaskCommission.objects.filter(
+            staff=staff_member,
+            quick_task__status='Completed',
+            quick_task__created_at__date__month=today.month,
+            quick_task__created_at__date__year=today.year
+        ).count()
 
-        for appointment in completed_appointments:
-            service_price = Decimal(str(appointment.service.price or 0))
-            commission_percent = Decimal(str(appointment.service.commission_percent or 0))
-            commission_amount = Decimal(str(appointment.service.commission_amount or 0))
+        total_jobs = appointment_jobs + quick_task_jobs
 
-            if commission_amount == 0 and commission_percent > 0:
-                commission_amount = (service_price * commission_percent) / Decimal('100')
+        staff_labels.append(staff_member.name)
+        staff_jobs.append(total_jobs)
 
-            total_commission += commission_amount
+    # Attendance this month
+    attendance_labels = []
+    attendance_days = []
 
-        commission_labels.append(staff_member.name)
-        commission_totals.append(float(total_commission))
+    for staff_member in performance_staff_list:
+        days_present = StaffAttendance.objects.filter(
+            staff=staff_member,
+            date__month=today.month,
+            date__year=today.year,
+            check_in__isnull=False
+        ).count()
 
-    paid_invoice_total = Decimal('0')
-    unpaid_invoice_total = Decimal('0')
+        attendance_labels.append(staff_member.name)
+        attendance_days.append(days_present)
 
-    for invoice in Invoice.objects.all():
-        invoice_total = Decimal(str(invoice.total_amount()))
-
-        if invoice.status == 'Paid':
-            paid_invoice_total += invoice_total
-
-        if invoice.status == 'Unpaid':
-             unpaid_invoice_total += invoice_total 
-    
+    # Staff commission this month, including appointments + quick tasks
     staff_commission_total = Decimal('0')
     commission_labels = []
     commission_totals = []
+
+    month_start = today.replace(day=1)
 
     if is_admin(request.user):
         commission_staff_list = Staff.objects.all().order_by('name')
@@ -206,12 +200,13 @@ def dashboard(request):
             messages.error(request, "Your login account is not linked to a staff profile.")
 
     for staff_member in commission_staff_list:
+        total_commission = Decimal('0')
+
         completed_appointments = Appointment.objects.filter(
             staff=staff_member,
-            status='Completed'
+            status='Completed',
+            date__range=[month_start, today]
         ).select_related('service')
-
-        total_commission = Decimal('0')
 
         for appointment in completed_appointments:
             service_price = Decimal(str(appointment.service.price or 0))
@@ -225,17 +220,39 @@ def dashboard(request):
 
             total_commission += earned_commission
 
+        quick_task_commission = QuickTaskCommission.objects.filter(
+            staff=staff_member,
+            quick_task__status='Completed',
+            quick_task__created_at__date__range=[month_start, today]
+        ).aggregate(total=Sum('commission_amount'))['total'] or 0
+
+        total_commission += Decimal(str(quick_task_commission))
+
         commission_labels.append(staff_member.name)
         commission_totals.append(float(total_commission))
 
         if not is_admin(request.user):
             staff_commission_total = total_commission
 
+    # Invoice totals
+    paid_invoice_total = Decimal('0')
+    unpaid_invoice_total = Decimal('0')
+
+    for invoice in Invoice.objects.all():
+        invoice_total = Decimal(str(invoice.total_amount()))
+
+        if invoice.status == 'Paid':
+            paid_invoice_total += invoice_total
+
+        if invoice.status == 'Unpaid':
+            unpaid_invoice_total += invoice_total
+
     context = {
         'clients': Client.objects.count(),
         'staff': Staff.objects.count(),
         'services': Service.objects.count(),
         'appointments': Appointment.objects.count(),
+
         'todays_revenue': todays_revenue,
 
         'staff_labels': json.dumps(staff_labels, cls=DjangoJSONEncoder),
@@ -247,21 +264,18 @@ def dashboard(request):
         'monthly_labels': json.dumps(monthly_labels, cls=DjangoJSONEncoder),
         'monthly_sales': json.dumps(monthly_sales, cls=DjangoJSONEncoder),
 
-                'attendance_labels': json.dumps(attendance_labels, cls=DjangoJSONEncoder),
+        'attendance_labels': json.dumps(attendance_labels, cls=DjangoJSONEncoder),
         'attendance_days': json.dumps(attendance_days, cls=DjangoJSONEncoder),
 
         'commission_labels': json.dumps(commission_labels, cls=DjangoJSONEncoder),
         'commission_totals': json.dumps(commission_totals, cls=DjangoJSONEncoder),
 
-        'is_admin': is_admin(request.user),
-        'is_staff': is_staff(request.user),
-
         'paid_invoice_total': paid_invoice_total,
         'unpaid_invoice_total': unpaid_invoice_total,
-
         'staff_commission_total': staff_commission_total,
-        'commission_labels': commission_labels,
-        'commission_totals': commission_totals,
+
+        'is_admin': is_admin(request.user),
+        'is_staff': is_staff(request.user),
     }
 
     return render(request, 'dashboard.html', context)
@@ -655,50 +669,80 @@ def ajax_available_staff(request):
 @login_required
 @user_passes_test(is_admin)
 def staff_commission_report(request):
-    today = date.today()
+    today = timezone.localdate()
 
-    selected_month = int(request.GET.get('month', today.month))
-    selected_year = int(request.GET.get('year', today.year))
+    selected_month = int(request.GET.get('month') or today.month)
+    selected_year = int(request.GET.get('year') or today.year)
 
-    staff_data = []
+    commission_rows = []
 
-    for staff in Staff.objects.all():
+    for staff_member in Staff.objects.all().order_by('name'):
         completed_appointments = Appointment.objects.filter(
-            staff=staff,
+            staff=staff_member,
             status='Completed',
             date__month=selected_month,
             date__year=selected_year
         ).select_related('service')
 
-        completed_jobs = completed_appointments.count()
+        appointment_commission_total = Decimal('0')
 
-        total_sales = sum(
-            Decimal(str(appointment.service.price or 0))
-            for appointment in completed_appointments
-        )
+        for appointment in completed_appointments:
+            service_price = Decimal(str(appointment.service.price or 0))
+            commission_percent = Decimal(str(appointment.service.commission_percent or 0))
+            commission_amount = Decimal(str(appointment.service.commission_amount or 0))
 
-        commission_earned = sum(
-            Decimal(str(appointment.service.commission_amount or 0))
-            if Decimal(str(appointment.service.commission_amount or 0)) > 0
-            else (
-                Decimal(str(appointment.service.price or 0)) *
-                Decimal(str(appointment.service.commission_percent or 0))
-            ) / Decimal('100')
-            for appointment in completed_appointments
-)
+            if commission_amount > 0:
+                earned_commission = commission_amount
+            else:
+                earned_commission = (service_price * commission_percent) / Decimal('100')
 
-        staff_data.append({
-            'staff': staff.name,
-            'jobs': completed_jobs,
-            'sales': total_sales,
-            'commission_rate': 'Percent + Amount',
-            'commission_earned': commission_earned,
+            appointment_commission_total += earned_commission
+
+        quick_task_commission_total = QuickTaskCommission.objects.filter(
+            staff=staff_member,
+            quick_task__status='Completed',
+            quick_task__created_at__month=selected_month,
+            quick_task__created_at__year=selected_year
+        ).aggregate(total=Sum('commission_amount'))['total'] or 0
+
+        quick_task_commission_total = Decimal(str(quick_task_commission_total))
+
+        quick_task_jobs = QuickTaskCommission.objects.filter(
+            staff=staff_member,
+            quick_task__status='Completed',
+            quick_task__created_at__month=selected_month,
+            quick_task__created_at__year=selected_year
+        ).count()
+
+        total_commission = appointment_commission_total + quick_task_commission_total
+
+        commission_rows.append({
+            'staff': staff_member,
+            'appointment_jobs': completed_appointments.count(),
+            'quick_task_jobs': quick_task_jobs,
+            'total_jobs': completed_appointments.count() + quick_task_jobs,
+            'appointment_commission_total': appointment_commission_total,
+            'quick_task_commission_total': quick_task_commission_total,
+            'total_commission': total_commission,
         })
 
-    return render(request, 'commission/staff_commission.html', {
-        'staff_data': staff_data,
+    months = [
+        (1, 'January'), (2, 'February'), (3, 'March'),
+        (4, 'April'), (5, 'May'), (6, 'June'),
+        (7, 'July'), (8, 'August'), (9, 'September'),
+        (10, 'October'), (11, 'November'), (12, 'December'),
+    ]
+
+    years = range(today.year - 2, today.year + 2)
+
+    return render(request, 'staff_commission.html', {
+        'commission_rows': commission_rows,
         'selected_month': selected_month,
         'selected_year': selected_year,
+        'months': months,
+        'years': years,
+        'is_admin': is_admin(request.user),
+        'is_staff': is_staff(request.user),
     })
 
 
@@ -768,14 +812,15 @@ def walk_in_customer(request):
 @login_required
 @user_passes_test(is_admin)
 def staff_work_history(request):
-    from datetime import date
-
-    today = date.today()
+    today = timezone.localdate()
 
     selected_month = int(request.GET.get('month') or today.month)
     selected_year = int(request.GET.get('year') or today.year)
     staff_id = request.GET.get('staff')
 
+    work_rows = []
+
+    # Completed appointment work
     appointments = Appointment.objects.filter(
         status='Completed',
         date__month=selected_month,
@@ -784,8 +829,6 @@ def staff_work_history(request):
 
     if staff_id:
         appointments = appointments.filter(staff_id=staff_id)
-
-    work_rows = []
 
     for appointment in appointments:
         service_price = Decimal(str(appointment.service.price or 0))
@@ -797,14 +840,52 @@ def staff_work_history(request):
         else:
             earned_commission = (service_price * commission_percent) / Decimal('100')
 
+        client_phone = ''
+        if appointment.client:
+            client_phone = getattr(appointment.client, 'phone', '') or ''
+
         work_rows.append({
-            'appointment': appointment,
+            'date': appointment.date,
+            'time': appointment.time,
             'staff': appointment.staff,
-            'client': appointment.client,
-            'service': appointment.service,
-            'service_price': service_price,
+            'client_name': appointment.client.name if appointment.client else 'Walk-in',
+            'client_phone': client_phone,
+            'work_type': 'Appointment',
+            'task_name': appointment.service.name,
+            'sale_amount': service_price,
             'commission': earned_commission,
         })
+
+    # Quick task work
+    quick_commissions = QuickTaskCommission.objects.filter(
+        quick_task__status='Completed',
+        quick_task__created_at__month=selected_month,
+        quick_task__created_at__year=selected_year
+    ).select_related('staff', 'quick_task').order_by('-quick_task__created_at')
+
+    if staff_id:
+        quick_commissions = quick_commissions.filter(staff_id=staff_id)
+
+    for item in quick_commissions:
+        local_created = timezone.localtime(item.quick_task.created_at)
+
+        work_rows.append({
+            'date': local_created.date(),
+            'time': local_created.time(),
+            'staff': item.staff,
+            'client_name': item.quick_task.client_name or 'Walk-in',
+            'client_phone': item.quick_task.client_phone or '',
+            'work_type': 'Quick Task',
+            'task_name': item.quick_task.task_name,
+            'sale_amount': item.quick_task.sale_amount,
+            'commission': item.commission_amount,
+        })
+
+    work_rows = sorted(
+        work_rows,
+        key=lambda row: (row['date'], row['time']),
+        reverse=True
+    )
 
     staff_list = Staff.objects.all().order_by('name')
 
@@ -828,7 +909,6 @@ def staff_work_history(request):
         'is_admin': is_admin(request.user),
         'is_staff': is_staff(request.user),
     })
-
 @login_required
 def book_appointment(request):
     if request.method == 'POST':
@@ -1028,10 +1108,9 @@ def payroll_report(request):
     selected_month = int(request.GET.get('month') or today.month)
     selected_year = int(request.GET.get('year') or today.year)
 
-    # Payroll always ends on 27th of selected month
+    # Payroll period: previous month 28th to selected month 27th
     period_end = date(selected_year, selected_month, 27)
 
-    # Payroll starts on 28th of previous month
     if selected_month == 1:
         period_start = date(selected_year - 1, 12, 28)
     else:
@@ -1040,14 +1119,16 @@ def payroll_report(request):
     payroll_rows = []
 
     for staff_member in Staff.objects.all().order_by('name'):
+        # Appointment work
         completed_appointments = Appointment.objects.filter(
             staff=staff_member,
             status='Completed',
             date__range=[period_start, period_end]
         ).select_related('service')
 
-        total_sales = Decimal('0')
-        total_earning = Decimal('0')
+        appointment_jobs = completed_appointments.count()
+        appointment_sales_total = Decimal('0')
+        appointment_commission_total = Decimal('0')
 
         for appointment in completed_appointments:
             service_price = Decimal(str(appointment.service.price or 0))
@@ -1055,12 +1136,36 @@ def payroll_report(request):
             commission_amount = Decimal(str(appointment.service.commission_amount or 0))
 
             if commission_amount > 0:
-                staff_earning = commission_amount
+                earned_commission = commission_amount
             else:
-                staff_earning = (service_price * commission_percent) / Decimal('100')
+                earned_commission = (service_price * commission_percent) / Decimal('100')
 
-            total_sales += service_price
-            total_earning += staff_earning
+            appointment_sales_total += service_price
+            appointment_commission_total += earned_commission
+
+        # Quick task work
+        quick_task_commissions = QuickTaskCommission.objects.filter(
+            staff=staff_member,
+            quick_task__status='Completed',
+            quick_task__created_at__date__range=[period_start, period_end]
+        ).select_related('quick_task')
+
+        quick_task_jobs = quick_task_commissions.count()
+
+        quick_task_commission_total = quick_task_commissions.aggregate(
+            total=Sum('commission_amount')
+        )['total'] or 0
+
+        quick_task_sales_total = Decimal('0')
+
+        for item in quick_task_commissions:
+            quick_task_sales_total += Decimal(str(item.quick_task.sale_amount or 0))
+
+        quick_task_commission_total = Decimal(str(quick_task_commission_total))
+
+        total_jobs = appointment_jobs + quick_task_jobs
+        total_sales = appointment_sales_total + quick_task_sales_total
+        total_earning = appointment_commission_total + quick_task_commission_total
 
         total_penalties = StaffPenalty.objects.filter(
             staff=staff_member,
@@ -1072,26 +1177,28 @@ def payroll_report(request):
 
         payroll_rows.append({
             'staff': staff_member,
-            'jobs': completed_appointments.count(),
+
+            'jobs': total_jobs,
+            'appointment_jobs': appointment_jobs,
+            'quick_task_jobs': quick_task_jobs,
+
+            'appointment_sales_total': appointment_sales_total,
+            'quick_task_sales_total': quick_task_sales_total,
             'total_sales': total_sales,
+
+            'appointment_commission_total': appointment_commission_total,
+            'quick_task_commission_total': quick_task_commission_total,
             'total_earning': total_earning,
+
             'total_penalties': total_penalties,
             'net_pay': net_pay,
         })
 
     months = [
-        (1, 'January'),
-        (2, 'February'),
-        (3, 'March'),
-        (4, 'April'),
-        (5, 'May'),
-        (6, 'June'),
-        (7, 'July'),
-        (8, 'August'),
-        (9, 'September'),
-        (10, 'October'),
-        (11, 'November'),
-        (12, 'December'),
+        (1, 'January'), (2, 'February'), (3, 'March'),
+        (4, 'April'), (5, 'May'), (6, 'June'),
+        (7, 'July'), (8, 'August'), (9, 'September'),
+        (10, 'October'), (11, 'November'), (12, 'December'),
     ]
 
     years = range(today.year - 2, today.year + 2)
@@ -1508,6 +1615,63 @@ def reset_system_user_password(request, user_id):
 
     return render(request, 'reset_system_user_password.html', {
         'system_user': system_user,
+        'is_admin': is_admin(request.user),
+        'is_staff': is_staff(request.user),
+    })
+
+@login_required
+@user_passes_test(is_admin_or_staff)
+def quick_task_sale(request):
+    staff_list = Staff.objects.all().order_by('name')
+
+    if request.method == 'POST':
+        task_name = request.POST.get('task_name', '').strip()
+        client_name = request.POST.get('client_name', '').strip()
+        client_phone = request.POST.get('client_phone', '').strip()
+        sale_amount = Decimal(str(request.POST.get('sale_amount') or 0))
+        selected_staff_ids = request.POST.getlist('staff_ids')
+
+        if not task_name:
+            messages.error(request, "Task name is required.")
+            return redirect('/quick-task/')
+
+        if sale_amount <= 0:
+            messages.error(request, "Sale amount must be greater than zero.")
+            return redirect('/quick-task/')
+
+        if not selected_staff_ids:
+            messages.error(request, "Please select at least one staff member.")
+            return redirect('/quick-task/')
+
+        quick_task = QuickTaskSale.objects.create(
+            task_name=task_name,
+            client_name=client_name if client_name else None,
+            client_phone=client_phone if client_phone else None,
+            sale_amount=sale_amount,
+            status='Completed',
+            created_by=request.user,
+        )
+
+        for staff_id in selected_staff_ids:
+            staff_member = Staff.objects.filter(id=staff_id).first()
+
+            if staff_member:
+                commission_value = Decimal(str(request.POST.get(f'commission_{staff_id}') or 0))
+
+                QuickTaskCommission.objects.create(
+                    quick_task=quick_task,
+                    staff=staff_member,
+                    commission_amount=commission_value
+                )
+
+        messages.success(request, "Quick task sale completed successfully.")
+        return redirect('/')
+
+    recent_tasks = QuickTaskSale.objects.all().order_by('-created_at')[:10]
+
+    return render(request, 'quick_task_sale.html', {
+        'staff_list': staff_list,
+        'recent_tasks': recent_tasks,
         'is_admin': is_admin(request.user),
         'is_staff': is_staff(request.user),
     })
