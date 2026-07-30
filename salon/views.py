@@ -1643,6 +1643,28 @@ def quick_task_sale(request):
             messages.error(request, "Please select at least one staff member.")
             return redirect('/quick-task/')
 
+        # Save client automatically if name or phone is provided
+        if client_name or client_phone:
+            if client_phone:
+                client, created = Client.objects.get_or_create(
+                    phone=client_phone,
+                    defaults={
+                        'name': client_name if client_name else client_phone
+                    }
+                )
+
+                if not created:
+                    if client_name and client.name != client_name:
+                        client.name = client_name
+                        client.save()
+            else:
+                Client.objects.get_or_create(
+                    name=client_name,
+                    defaults={
+                        'phone': ''
+                    }
+                )
+
         quick_task = QuickTaskSale.objects.create(
             task_name=task_name,
             client_name=client_name if client_name else None,
