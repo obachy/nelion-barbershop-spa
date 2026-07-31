@@ -275,115 +275,22 @@
 
 {% block extra_js %}
 
+<div class="alert alert-warning">
+    Daily Labels: {{ daily_labels }} <br>
+    Daily Sales: {{ daily_sales }} <br>
+    Monthly Labels: {{ monthly_labels }} <br>
+    Monthly Sales: {{ monthly_sales }} <br>
+    Staff Labels: {{ staff_labels }} <br>
+    Staff Jobs: {{ staff_jobs }} <br>
+    Attendance Labels: {{ attendance_labels }} <br>
+    Attendance Days: {{ attendance_days }} <br>
+    Commission Labels: {{ commission_labels }} <br>
+    Commission Totals: {{ commission_totals }}
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <script>
-    const staffLabels = {{ staff_labels|default:"[]"|safe }};
-    const staffJobs = {{ staff_jobs|default:"[]"|safe }};
-
-    const dailyLabels = {{ daily_labels|default:"[]"|safe }};
-    const dailySales = {{ daily_sales|default:"[]"|safe }};
-
-    const monthlyLabels = {{ monthly_labels|default:"[]"|safe }};
-    const monthlySales = {{ monthly_sales|default:"[]"|safe }};
-
-    const attendanceLabels = {{ attendance_labels|default:"[]"|safe }};
-    const attendanceDays = {{ attendance_days|default:"[]"|safe }};
-
-    const commissionLabels = {{ commission_labels|default:"[]"|safe }};
-    const commissionTotals = {{ commission_totals|default:"[]"|safe }};
-
-    function barChart(id, labels, values, title) {
-        new Chart(document.getElementById(id), {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: title,
-                    data: values,
-                    borderWidth: 1,
-                    borderRadius: 7
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: { precision: 0 }
-                    }
-                }
-            }
-        });
-    }
-
-    function moneyBarChart(id, labels, values, title) {
-        new Chart(document.getElementById(id), {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: title,
-                    data: values,
-                    borderWidth: 1,
-                    borderRadius: 7
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return 'KES ' + context.raw;
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    y: { beginAtZero: true }
-                }
-            }
-        });
-    }
-
-    <script>
-    const dailyIncomeCanvas = document.getElementById('dailyIncomeChart');
-
-    if (dailyIncomeCanvas) {
-        new Chart(dailyIncomeCanvas, {
-            type: 'line',
-            data: {
-                labels: dailyLabels,
-                datasets: [{
-                    label: 'Daily Income',
-                    data: dailySales,
-                    borderWidth: 3,
-                    tension: 0.35,
-                    fill: true,
-                    pointRadius: 3
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return 'KES ' + context.raw;
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    y: { beginAtZero: true }
-                <script>
     const dailyLabels = {{ daily_labels|default:"[]"|safe }};
     const dailySales = {{ daily_sales|default:"[]"|safe }};
 
@@ -420,10 +327,14 @@
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: { display: false }
+                    legend: {
+                        display: false
+                    }
                 },
                 scales: {
-                    y: { beginAtZero: true }
+                    y: {
+                        beginAtZero: true
+                    }
                 }
             }
         });
@@ -450,7 +361,9 @@
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: { display: false },
+                    legend: {
+                        display: false
+                    },
                     tooltip: {
                         callbacks: {
                             label: function(context) {
@@ -460,7 +373,9 @@
                     }
                 },
                 scales: {
-                    y: { beginAtZero: true }
+                    y: {
+                        beginAtZero: true
+                    }
                 }
             }
         });
@@ -486,7 +401,9 @@
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: { display: false },
+                    legend: {
+                        display: false
+                    },
                     tooltip: {
                         callbacks: {
                             label: function(context) {
@@ -496,7 +413,9 @@
                     }
                 },
                 scales: {
-                    y: { beginAtZero: true }
+                    y: {
+                        beginAtZero: true
+                    }
                 }
             }
         });
