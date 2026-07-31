@@ -62,6 +62,16 @@ def is_admin_or_staff(user):
     return user.is_authenticated and (
         user.is_superuser
         or user.groups.filter(name='Admin').exists()
+        or user.groups.filter(name='Manager').exists()
+        or user.groups.filter(name='Staff').exists()
+    )
+
+
+def is_admin_manager_or_staff(user):
+    return user.is_authenticated and (
+        user.is_superuser
+        or user.groups.filter(name='Admin').exists()
+        or user.groups.filter(name='Manager').exists()
         or user.groups.filter(name='Staff').exists()
     )
 
@@ -72,6 +82,7 @@ def is_admin_or_manager(user):
         or user.groups.filter(name='Admin').exists()
         or user.groups.filter(name='Manager').exists()
     )
+
 
 def get_staff_profile_for_user(user):
     if not user.is_authenticated:
@@ -327,7 +338,7 @@ def delete_appointment(request, appointment_id):
 # ======================
 
 @login_required
-@user_passes_test(is_admin_or_staff)
+@user_passes_test(is_admin_manager_or_staff)
 def clients_list(request):
     clients = Client.objects.all().order_by('name')
     return render(request, 'clients.html', {'clients': clients})
@@ -350,7 +361,7 @@ def edit_client(request, client_id):
     })
 
 @login_required
-@user_passes_test(is_admin_or_staff)
+@user_passes_test(is_admin_manager_or_staff)
 def add_client(request):
     if request.method == 'POST':
         form = ClientForm(request.POST)
@@ -484,13 +495,13 @@ def delete_staff(request, staff_id):
 # ======================
 
 @login_required
-@user_passes_test(is_admin_or_staff)
+@user_passes_test(is_admin_manager_or_staff)
 def services_list(request):
     services = Service.objects.all().order_by('name')
     return render(request, 'services.html', {'services': services})
 
 @login_required
-@user_passes_test(is_admin)
+@user_passes_test(is_admin_manager_or_staff)
 def add_service(request):
     staff_list = Staff.objects.all().order_by('name')
     departments = Department.objects.all().order_by('name')
@@ -1235,7 +1246,7 @@ def payroll_report(request):
     })
 
 @login_required
-@user_passes_test(is_admin)
+@user_passes_test(is_admin_manager_or_staff)
 def expenses_list(request):
     today = date.today()
 
@@ -1278,7 +1289,7 @@ def expenses_list(request):
 
 
 @login_required
-@user_passes_test(is_admin)
+@user_passes_test(is_admin_manager_or_staff)
 def add_expense(request):
     if request.method == 'POST':
         expense_type = request.POST.get('expense_type')
@@ -1311,7 +1322,7 @@ def add_expense(request):
 
 
 @login_required
-@user_passes_test(is_admin)
+@user_passes_test(is_admin_or_manager)
 def mark_expense_paid(request, expense_id):
     expense = get_object_or_404(Expense, id=expense_id)
     expense.status = 'Paid'
@@ -1329,7 +1340,7 @@ def delete_expense(request, expense_id):
     return redirect('/expenses/')
 
 @login_required
-@user_passes_test(is_admin)
+@user_passes_test(is_admin_manager_or_staff)
 def invoice_list(request):
     invoices = Invoice.objects.select_related('client').all().order_by('-invoice_date', '-id')
 
@@ -1354,7 +1365,7 @@ def invoice_list(request):
 
 
 @login_required
-@user_passes_test(is_admin)
+@user_passes_test(is_admin_manager_or_staff)
 def add_invoice(request):
     clients = Client.objects.all().order_by('name')
 
@@ -1501,7 +1512,7 @@ def delete_department(request, department_id):
     return redirect('/departments/')
 
 @login_required
-@user_passes_test(is_admin_or_staff)
+@user_passes_test(is_admin_manager_or_staff)
 def services_list(request):
     services = Service.objects.select_related('department').all().order_by('name')
 
@@ -1662,7 +1673,7 @@ def reset_system_user_password(request, user_id):
     })
 
 @login_required
-@user_passes_test(is_admin_or_staff)
+@user_passes_test(is_admin_manager_or_staff)
 def quick_task_sale(request):
     staff_list = Staff.objects.all().order_by('name')
 

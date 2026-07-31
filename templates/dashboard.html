@@ -202,6 +202,7 @@
         </div>
     </div>
 
+    {% if is_admin %}
     <div class="col-lg-4">
         <div class="card chart-card shadow-sm">
             <div class="card-body">
@@ -219,6 +220,7 @@
             </div>
         </div>
     </div>
+    {% endif %}
 
 </div>
 
@@ -275,18 +277,6 @@
 
 {% block extra_js %}
 
-<div class="alert alert-warning">
-    Daily Labels: {{ daily_labels }} <br>
-    Daily Sales: {{ daily_sales }} <br>
-    Monthly Labels: {{ monthly_labels }} <br>
-    Monthly Sales: {{ monthly_sales }} <br>
-    Staff Labels: {{ staff_labels }} <br>
-    Staff Jobs: {{ staff_jobs }} <br>
-    Attendance Labels: {{ attendance_labels }} <br>
-    Attendance Days: {{ attendance_days }} <br>
-    Commission Labels: {{ commission_labels }} <br>
-    Commission Totals: {{ commission_totals }}
-</div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
