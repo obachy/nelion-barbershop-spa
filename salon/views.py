@@ -120,6 +120,23 @@ class RoleBasedLoginView(LoginView):
 def dashboard(request):
     today = timezone.localdate()
 
+    if today.day >= 27:
+        period_start = today.replace(day=27)
+
+        if today.month == 12:
+            period_end = date(today.year + 1, 1, 27)
+        else:
+            period_end = date(today.year, today.month + 1, 27)
+    else:
+        period_end = today.replace(day=27)
+
+        if today.month == 1:
+            period_start = date(today.year - 1, 12, 27)
+        else:
+            period_start = date(today.year, today.month - 1, 27)
+
+    analytics_end = min(today, period_end)
+
     # Today sales, including appointments + quick tasks
     appointment_sales_today = Appointment.objects.filter(
         status='Completed',
@@ -137,9 +154,9 @@ def dashboard(request):
     daily_labels = []
     daily_sales = []
 
-    for day in range(1, today.day + 1):
-        current_date = today.replace(day=day)
+    current_date = period_start
 
+    while current_date <= analytics_end:
         appointment_total = Appointment.objects.filter(
             status='Completed',
             date=current_date
@@ -154,6 +171,8 @@ def dashboard(request):
 
         daily_labels.append(current_date.strftime('%d %b'))
         daily_sales.append(float(total_income))
+
+        current_date += timedelta(days=1)
 
     # Monthly income
     monthly_labels = []
@@ -195,17 +214,15 @@ def dashboard(request):
         appointment_jobs = Appointment.objects.filter(
             staff=staff_member,
             status='Completed',
-            date__month=today.month,
-            date__year=today.year
+            date__range=[period_start, period_end]
         ).count()
 
         quick_task_jobs = QuickTaskCommission.objects.filter(
             staff=staff_member,
             quick_task__status='Completed',
-            quick_task__created_at__date__month=today.month,
-            quick_task__created_at__date__year=today.year
+            quick_task__created_at__date__range=[period_start, period_end]
         ).count()
-
+        
         total_jobs = appointment_jobs + quick_task_jobs
 
         staff_labels.append(staff_member.name)
@@ -218,8 +235,7 @@ def dashboard(request):
     for staff_member in performance_staff_list:
         days_present = StaffAttendance.objects.filter(
             staff=staff_member,
-            date__month=today.month,
-            date__year=today.year,
+            date__range=[period_start, period_end],
             check_in__isnull=False
         ).count()
 
@@ -231,7 +247,7 @@ def dashboard(request):
     commission_labels = []
     commission_totals = []
 
-    month_start = today.replace(day=1)
+    month_start = period_start
 
     if is_admin(request.user) or is_manager(request.user):
         commission_staff_list = Staff.objects.all().order_by('name')
@@ -250,7 +266,7 @@ def dashboard(request):
         completed_appointments = Appointment.objects.filter(
             staff=staff_member,
             status='Completed',
-            date__range=[month_start, today]
+            date__range=[period_start, period_end]
         ).select_related('service')
 
         for appointment in completed_appointments:
@@ -268,7 +284,7 @@ def dashboard(request):
         quick_task_commission = QuickTaskCommission.objects.filter(
             staff=staff_member,
             quick_task__status='Completed',
-            quick_task__created_at__date__range=[month_start, today]
+            quick_task__created_at__date__range=[period_start, period_end]
         ).aggregate(total=Sum('commission_amount'))['total'] or 0
 
         total_commission += Decimal(str(quick_task_commission))
@@ -297,6 +313,9 @@ def dashboard(request):
         'staff': Staff.objects.count(),
         'services': Service.objects.count(),
         'appointments': Appointment.objects.count(),
+        
+        'period_start': period_start,
+        'period_end': period_end,
 
         'todays_revenue': todays_revenue,
 
