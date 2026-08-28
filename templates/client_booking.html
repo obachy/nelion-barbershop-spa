@@ -1,81 +1,566 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Book Appointment</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <meta charset="UTF-8">
+
+    <title>Book Appointment | Nelishakeys Beauty Space</title>
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1"
+    >
+
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+        rel="stylesheet"
+    >
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: Arial, Helvetica, sans-serif;
+            background:
+                linear-gradient(
+                    135deg,
+                    #fdf2f8 0%,
+                    #fff7ed 50%,
+                    #f8fafc 100%
+                );
+            color: #1f2937;
+        }
+
+        .booking-wrapper {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            padding: 35px 15px;
+        }
+
+        .booking-card {
+            max-width: 620px;
+            margin: auto;
+            background: #ffffff;
+            border-radius: 24px;
+            overflow: hidden;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            box-shadow:
+                0 20px 50px rgba(0, 0, 0, 0.10);
+        }
+
+        .booking-header {
+            background:
+                linear-gradient(
+                    135deg,
+                    #111827,
+                    #374151
+                );
+            color: white;
+            text-align: center;
+            padding: 34px 25px;
+        }
+
+        .brand-name {
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            opacity: 0.75;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+
+        .booking-header h1 {
+            margin: 0;
+            font-size: 30px;
+            font-weight: 800;
+        }
+
+        .booking-header p {
+            margin: 8px 0 0;
+            color: rgba(255, 255, 255, 0.75);
+            font-size: 14px;
+        }
+
+        .booking-body {
+            padding: 32px;
+        }
+
+        .form-section-title {
+            font-size: 13px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #9ca3af;
+            margin-top: 8px;
+            margin-bottom: 14px;
+        }
+
+        .form-label {
+            font-size: 13px;
+            font-weight: 700;
+            color: #374151;
+            margin-bottom: 6px;
+        }
+
+        .form-control,
+        .form-select {
+            height: 52px;
+            border-radius: 14px;
+            border: 1px solid #e5e7eb;
+            padding-left: 15px;
+            padding-right: 15px;
+            font-size: 15px;
+            box-shadow: none !important;
+        }
+
+        .form-control:focus,
+        .form-select:focus {
+            border-color: #111827;
+            box-shadow:
+                0 0 0 3px rgba(17, 24, 39, 0.08)
+                !important;
+        }
+
+        .input-group-box {
+            margin-bottom: 17px;
+        }
+
+        .date-time-box {
+            background: #f9fafb;
+            border-radius: 18px;
+            padding: 18px;
+            margin-top: 4px;
+            margin-bottom: 18px;
+            border: 1px solid #eef0f3;
+        }
+
+        .staff-info {
+            background: #fff7ed;
+            color: #9a3412;
+            padding: 11px 14px;
+            border-radius: 12px;
+            font-size: 13px;
+            margin-top: 8px;
+            display: none;
+        }
+
+        .book-btn {
+            width: 100%;
+            border: none;
+            border-radius: 14px;
+            padding: 15px;
+            margin-top: 8px;
+            background: #111827;
+            color: white;
+            font-size: 16px;
+            font-weight: 800;
+            transition: all 0.2s ease;
+        }
+
+        .book-btn:hover {
+            background: #000000;
+            transform: translateY(-1px);
+        }
+
+        .booking-footer {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 13px;
+            color: #9ca3af;
+        }
+
+        .loading-text {
+            color: #6b7280;
+            font-size: 13px;
+        }
+
+        @media (max-width: 576px) {
+            .booking-wrapper {
+                padding: 15px;
+                align-items: flex-start;
+            }
+
+            .booking-card {
+                border-radius: 18px;
+                width: 100%;
+            }
+
+            .booking-header {
+                padding: 27px 20px;
+            }
+
+            .booking-header h1 {
+                font-size: 25px;
+            }
+
+            .booking-body {
+                padding: 22px 18px;
+            }
+
+            .date-time-box {
+                padding: 15px;
+            }
+        }
+    </style>
 </head>
-<body class="bg-light">
 
-<div class="container mt-5">
-<div class="row justify-content-center">
-<div class="col-md-6">
+<body>
 
-<div class="card shadow">
-<div class="card-header bg-primary text-white text-center">
-    <h4>Book Appointment</h4>
-</div>
+<div class="booking-wrapper">
 
-<div class="card-body">
-<form method="post">
-{% csrf_token %}
+    <div class="container">
 
-<input type="text" name="name" placeholder="Your Name" class="form-control mb-2" required>
-<input type="text" name="phone" placeholder="Phone" class="form-control mb-2" required>
-<input type="email" name="email" placeholder="Email" class="form-control mb-2">
+        <div class="booking-card">
 
-<select name="service" class="form-control mb-2" required>
-<option value="">Select Service</option>
-{% for s in services %}
-<option value="{{ s.id }}">{{ s.name }} - KES {{ s.price }}</option>
-{% endfor %}
-</select>
+            <div class="booking-header">
 
-<input type="date" name="date" id="date" class="form-control mb-2" required>
-<input type="time" name="time" id="time" class="form-control mb-2" required>
+                <div class="brand-name">
+                    Nelishakeys Beauty Space
+                </div>
 
-<select name="staff" id="staff" class="form-control mb-3" required>
-<option value="">Select Staff</option>
-</select>
+                <h1>
+                    Book Your Appointment
+                </h1>
 
-<button class="btn btn-success w-100">Book Appointment</button>
+                <p>
+                    Select your preferred service, date,
+                    time and available staff member.
+                </p>
 
-</form>
-</div>
-</div>
+            </div>
 
-</div>
-</div>
+            <div class="booking-body">
+
+                <form method="post" id="appointmentForm">
+
+                    {% csrf_token %}
+
+                    <div class="form-section-title">
+                        Your Details
+                    </div>
+
+                    <div class="input-group-box">
+                        <label class="form-label">
+                            Full Name
+                        </label>
+
+                        <input
+                            type="text"
+                            name="name"
+                            class="form-control"
+                            placeholder="Enter your full name"
+                            required
+                        >
+                    </div>
+
+                    <div class="row">
+
+                        <div class="col-md-6">
+                            <div class="input-group-box">
+
+                                <label class="form-label">
+                                    Phone Number
+                                </label>
+
+                                <input
+                                    type="text"
+                                    name="phone"
+                                    class="form-control"
+                                    placeholder="e.g. 0712345678"
+                                    required
+                                >
+
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="input-group-box">
+
+                                <label class="form-label">
+                                    Email
+                                    <span class="text-muted">
+                                        (Optional)
+                                    </span>
+                                </label>
+
+                                <input
+                                    type="email"
+                                    name="email"
+                                    class="form-control"
+                                    placeholder="you@example.com"
+                                >
+
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="form-section-title">
+                        Service
+                    </div>
+
+                    <div class="input-group-box">
+
+                        <label class="form-label">
+                            Choose Service
+                        </label>
+
+                        <select
+                            name="service"
+                            class="form-select"
+                            required
+                        >
+
+                            <option value="">
+                                Select a service
+                            </option>
+
+                            {% for s in services %}
+                                <option value="{{ s.id }}">
+                                    {{ s.name }} — KES {{ s.price }}
+                                </option>
+                            {% endfor %}
+
+                        </select>
+
+                    </div>
+
+                    <div class="form-section-title">
+                        Appointment Time
+                    </div>
+
+                    <div class="date-time-box">
+
+                        <div class="row">
+
+                            <div class="col-md-6">
+                                <div class="input-group-box">
+
+                                    <label class="form-label">
+                                        Appointment Date
+                                    </label>
+
+                                    <input
+                                        type="date"
+                                        name="date"
+                                        id="date"
+                                        class="form-control"
+                                        required
+                                    >
+
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="input-group-box">
+
+                                    <label class="form-label">
+                                        Appointment Time
+                                    </label>
+
+                                    <input
+                                        type="time"
+                                        name="time"
+                                        id="time"
+                                        class="form-control"
+                                        required
+                                    >
+
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <div class="input-group-box mb-0">
+
+                            <label class="form-label">
+                                Available Staff
+                            </label>
+
+                            <select
+                                name="staff"
+                                id="staff"
+                                class="form-select"
+                                required
+                                disabled
+                            >
+                                <option value="">
+                                    Select date and time first
+                                </option>
+                            </select>
+
+                            <div
+                                id="staffInfo"
+                                class="staff-info"
+                            ></div>
+
+                        </div>
+
+                    </div>
+
+                    <button
+                        type="submit"
+                        class="book-btn"
+                    >
+                        Book Appointment
+                    </button>
+
+                </form>
+
+                <div class="booking-footer">
+                    Your appointment will be reserved
+                    once your booking is submitted.
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener(
+    'DOMContentLoaded',
+    function () {
 
-const dateInput = document.getElementById('date');
-const timeInput = document.getElementById('time');
-const staffSelect = document.getElementById('staff');
+        const dateInput =
+            document.getElementById('date');
 
-function loadStaff() {
-    const date = dateInput.value;
-    const time = timeInput.value;
+        const timeInput =
+            document.getElementById('time');
 
-    if (!date || !time) return;
+        const staffSelect =
+            document.getElementById('staff');
 
-    fetch(`/ajax/available-staff/?date=${date}&time=${time}`)
-    .then(response => response.json())
-    .then(data => {
-        staffSelect.innerHTML = '<option value="">Select Staff</option>';
-        data.staff.forEach(s => {
-            staffSelect.innerHTML += `<option value="${s.id}">${s.name}</option>`;
-        });
-    });
-}
+        const staffInfo =
+            document.getElementById('staffInfo');
 
-dateInput.addEventListener('change', loadStaff);
-timeInput.addEventListener('change', loadStaff);
 
-});
+        function loadStaff() {
+
+            const date = dateInput.value;
+            const time = timeInput.value;
+
+            staffInfo.style.display = 'none';
+
+            if (!date || !time) {
+
+                staffSelect.disabled = true;
+
+                staffSelect.innerHTML =
+                    '<option value="">' +
+                    'Select date and time first' +
+                    '</option>';
+
+                return;
+            }
+
+            staffSelect.disabled = true;
+
+            staffSelect.innerHTML =
+                '<option value="">' +
+                'Checking available staff...' +
+                '</option>';
+
+            fetch(
+                `/ajax/available-staff/?date=${encodeURIComponent(date)}&time=${encodeURIComponent(time)}`
+            )
+            .then(response => {
+
+                if (!response.ok) {
+                    throw new Error(
+                        'Unable to load staff'
+                    );
+                }
+
+                return response.json();
+            })
+            .then(data => {
+
+                staffSelect.innerHTML =
+                    '<option value="">' +
+                    'Select available staff' +
+                    '</option>';
+
+                if (
+                    data.staff &&
+                    data.staff.length > 0
+                ) {
+
+                    data.staff.forEach(
+                        staffMember => {
+
+                            const option =
+                                document.createElement(
+                                    'option'
+                                );
+
+                            option.value =
+                                staffMember.id;
+
+                            option.textContent =
+                                staffMember.name;
+
+                            staffSelect.appendChild(
+                                option
+                            );
+                        }
+                    );
+
+                    staffSelect.disabled = false;
+
+                } else {
+
+                    staffSelect.innerHTML =
+                        '<option value="">' +
+                        'No staff available' +
+                        '</option>';
+
+                    staffInfo.textContent =
+                        'No staff member is available at this date and time. Please choose another time.';
+
+                    staffInfo.style.display =
+                        'block';
+                }
+
+            })
+            .catch(error => {
+
+                staffSelect.innerHTML =
+                    '<option value="">' +
+                    'Unable to load staff' +
+                    '</option>';
+
+                staffInfo.textContent =
+                    'There was a problem checking staff availability. Please try again.';
+
+                staffInfo.style.display =
+                    'block';
+            });
+
+        }
+
+
+        dateInput.addEventListener(
+            'change',
+            loadStaff
+        );
+
+        timeInput.addEventListener(
+            'change',
+            loadStaff
+        );
+
+    }
+);
 </script>
 
 </body>
 </html>
+```

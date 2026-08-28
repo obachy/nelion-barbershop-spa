@@ -1,68 +1,427 @@
+```html
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+
     <title>Clients</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1"
+    >
+
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+        rel="stylesheet"
+    >
+
+    <style>
+        body {
+            background: #f5f7fb;
+            color: #1f2937;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        .topbar {
+            background: #111827;
+            color: white;
+            padding: 18px 0;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+        }
+
+        .topbar-title {
+            font-size: 22px;
+            font-weight: 800;
+            margin: 0;
+        }
+
+        .topbar-subtitle {
+            margin: 3px 0 0;
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.65);
+        }
+
+        .page-wrapper {
+            max-width: 1150px;
+            margin: 0 auto;
+            padding: 30px 15px 50px;
+        }
+
+        .page-heading {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 22px;
+        }
+
+        .page-heading h2 {
+            margin: 0;
+            font-weight: 800;
+            color: #111827;
+        }
+
+        .page-heading p {
+            margin: 4px 0 0;
+            color: #6b7280;
+            font-size: 14px;
+        }
+
+        .client-card {
+            background: white;
+            border: 1px solid #e9edf2;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.06);
+        }
+
+        .client-card-header {
+            padding: 20px 22px;
+            border-bottom: 1px solid #edf0f3;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .client-card-title {
+            font-weight: 800;
+            font-size: 17px;
+            color: #111827;
+        }
+
+        .client-count {
+            font-size: 12px;
+            font-weight: 700;
+            color: #6b7280;
+            background: #f3f4f6;
+            padding: 6px 10px;
+            border-radius: 999px;
+        }
+
+        .search-box {
+            padding: 18px 22px;
+            border-bottom: 1px solid #edf0f3;
+            background: #fafbfc;
+        }
+
+        .search-input {
+            border-radius: 12px;
+            min-height: 46px;
+            border: 1px solid #e5e7eb;
+            box-shadow: none !important;
+        }
+
+        .search-input:focus {
+            border-color: #111827;
+            box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.08) !important;
+        }
+
+        .clients-table {
+            margin-bottom: 0;
+        }
+
+        .clients-table thead th {
+            background: #f8fafc;
+            color: #6b7280;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.45px;
+            font-weight: 800;
+            padding: 14px 16px;
+            border-bottom: 1px solid #e5e7eb;
+            white-space: nowrap;
+        }
+
+        .clients-table tbody td {
+            padding: 15px 16px;
+            vertical-align: middle;
+            border-color: #f0f2f5;
+        }
+
+        .clients-table tbody tr:hover {
+            background: #fafafa;
+        }
+
+        .client-name {
+            font-weight: 800;
+            color: #111827;
+        }
+
+        .client-contact {
+            color: #4b5563;
+            white-space: nowrap;
+        }
+
+        .client-email {
+            color: #6b7280;
+        }
+
+        .action-btn {
+            border-radius: 999px;
+            font-weight: 700;
+            padding-left: 14px;
+            padding-right: 14px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 45px 20px !important;
+            color: #9ca3af !important;
+        }
+
+        .empty-state strong {
+            display: block;
+            color: #6b7280;
+            margin-bottom: 4px;
+        }
+
+        .add-btn {
+            border-radius: 999px;
+            padding: 10px 18px;
+            font-weight: 800;
+        }
+
+        .dashboard-btn {
+            border-radius: 999px;
+            font-weight: 700;
+        }
+
+        @media (max-width: 767px) {
+            .page-wrapper {
+                padding-top: 20px;
+            }
+
+            .topbar-title {
+                font-size: 19px;
+            }
+
+            .client-card-header {
+                align-items: flex-start;
+            }
+
+            .clients-table {
+                min-width: 760px;
+            }
+        }
+    </style>
 </head>
 
-<body class="bg-light">
+<body>
 
-<nav class="navbar navbar-dark bg-dark">
+<div class="topbar">
     <div class="container">
-        <span class="navbar-brand">Clients</span>
-        <a href="/" class="btn btn-outline-light btn-sm">Dashboard</a>
-    </div>
-</nav>
 
-<div class="container mt-4">
+        <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap">
 
-    <div class="card shadow">
-        <div class="card-header bg-primary text-white d-flex justify-content-between">
-            <span>Clients List</span>
-            <a href="/add-client/" class="btn btn-light btn-sm">
-                ➕ Add Client
+            <div>
+                <h1 class="topbar-title">
+                    Clients
+                </h1>
+
+                <p class="topbar-subtitle">
+                    Manage your salon customer records
+                </p>
+            </div>
+
+            <a
+                href="/"
+                class="btn btn-outline-light btn-sm dashboard-btn px-3"
+            >
+                Dashboard
             </a>
+
         </div>
 
-        <div class="card-body p-0">
-            <table class="table table-striped mb-0">
+    </div>
+</div>
+
+
+<div class="page-wrapper">
+
+    <div class="page-heading">
+
+        <div>
+            <h2>Client Directory</h2>
+
+            <p>
+                View and manage all registered clients.
+            </p>
+        </div>
+
+        <a
+            href="/add-client/"
+            class="btn btn-dark add-btn"
+        >
+            + Add Client
+        </a>
+
+    </div>
+
+
+    <div class="client-card">
+
+        <div class="client-card-header">
+
+            <div class="client-card-title">
+                Clients List
+            </div>
+
+            <div class="client-count">
+                {{ clients|length }} Clients
+            </div>
+
+        </div>
+
+
+        <div class="search-box">
+
+            <input
+                type="text"
+                id="clientSearch"
+                class="form-control search-input"
+                placeholder="Search by name, phone or email..."
+            >
+
+        </div>
+
+
+        <div class="table-responsive">
+
+            <table
+                class="table clients-table align-middle"
+                id="clientsTable"
+            >
+
                 <thead>
                     <tr>
-                        <th>#</th>
+                        <th style="width: 60px;">#</th>
                         <th>Name</th>
                         <th>Phone</th>
                         <th>Email</th>
-                        <th>Actions</th>
+                        <th class="text-end">Actions</th>
                     </tr>
                 </thead>
+
                 <tbody>
+
                     {% for client in clients %}
-                    <tr>
-                        <td>{{ forloop.counter }}</td>
-                        <td>{{ client.name }}</td>
-                        <td>{{ client.phone }}</td>
-                        <td>{{ client.email }}</td>
-                        <td>
-                            <a href="/clients/edit/{{ client.id }}/"
-                               class="btn btn-sm btn-primary">
-                                Edit
-                            </a>
-                        </td>
-                    </tr>
+
+                        <tr>
+
+                            <td class="text-muted">
+                                {{ forloop.counter }}
+                            </td>
+
+                            <td>
+                                <div class="client-name">
+                                    {{ client.name }}
+                                </div>
+                            </td>
+
+                            <td>
+                                <div class="client-contact">
+                                    {{ client.phone }}
+                                </div>
+                            </td>
+
+                            <td>
+                                <div class="client-email">
+
+                                    {% if client.email %}
+                                        {{ client.email }}
+                                    {% else %}
+                                        <span class="text-muted">
+                                            —
+                                        </span>
+                                    {% endif %}
+
+                                </div>
+                            </td>
+
+                            <td class="text-end">
+
+                                <a
+                                    href="/clients/edit/{{ client.id }}/"
+                                    class="btn btn-outline-dark btn-sm action-btn"
+                                >
+                                    Edit
+                                </a>
+
+                            </td>
+
+                        </tr>
+
                     {% empty %}
-                    <tr>
-                        <td colspan="5" class="text-center text-muted">
-                            No clients found
-                        </td>
-                    </tr>
+
+                        <tr>
+                            <td
+                                colspan="5"
+                                class="empty-state"
+                            >
+                                <strong>
+                                    No clients found
+                                </strong>
+
+                                Add your first client to get started.
+                            </td>
+                        </tr>
+
                     {% endfor %}
+
                 </tbody>
+
             </table>
+
         </div>
 
     </div>
 
 </div>
 
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    const searchInput =
+        document.getElementById('clientSearch');
+
+    const table =
+        document.getElementById('clientsTable');
+
+    if (!searchInput || !table) {
+        return;
+    }
+
+    const rows =
+        table.querySelectorAll('tbody tr');
+
+    searchInput.addEventListener('input', function () {
+
+        const searchTerm =
+            this.value.toLowerCase().trim();
+
+        rows.forEach(function (row) {
+
+            const rowText =
+                row.textContent.toLowerCase();
+
+            if (rowText.includes(searchTerm)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+
+        });
+
+    });
+
+});
+</script>
+
 </body>
 </html>
+```
