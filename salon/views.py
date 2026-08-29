@@ -6,6 +6,7 @@ from django.contrib.auth import logout
 from django.urls import reverse_lazy
 from django.db.models import Sum
 from django.utils import timezone
+from django.views.decorators.http import require_POST
 from django.http import JsonResponse
 from datetime import date, time, timedelta
 from django.views.decorators.csrf import csrf_protect
@@ -214,12 +215,14 @@ def dashboard(request):
         appointment_jobs = Appointment.objects.filter(
             staff=staff_member,
             status='Completed',
+            approval_status='Approved',
             date__range=[period_start, period_end]
         ).count()
 
         quick_task_jobs = QuickTaskCommission.objects.filter(
             staff=staff_member,
             quick_task__status='Completed',
+            quick_task__approval_status='Approved',
             quick_task__created_at__date__range=[period_start, period_end]
         ).count()
         
@@ -266,6 +269,7 @@ def dashboard(request):
         completed_appointments = Appointment.objects.filter(
             staff=staff_member,
             status='Completed',
+            approval_status='Approved',
             date__range=[period_start, period_end]
         ).select_related('service')
 
@@ -284,6 +288,7 @@ def dashboard(request):
         quick_task_commission = QuickTaskCommission.objects.filter(
             staff=staff_member,
             quick_task__status='Completed',
+            quick_task__approval_status='Approved',
             quick_task__created_at__date__range=[period_start, period_end]
         ).aggregate(total=Sum('commission_amount'))['total'] or 0
 
@@ -307,6 +312,21 @@ def dashboard(request):
 
         if invoice.status == 'Unpaid':
             unpaid_invoice_total += invoice_total
+
+    pending_appointment_approvals = Appointment.objects.filter(
+        status='Completed',
+        approval_status='Pending'
+    ).count()
+
+    pending_quick_task_approvals = QuickTaskSale.objects.filter(
+        status='Completed',
+        approval_status='Pending'
+    ).count()
+
+    pending_approvals = (
+        pending_appointment_approvals
+        + pending_quick_task_approvals
+    )
 
     context = {
         'clients': Client.objects.count(),
@@ -341,6 +361,9 @@ def dashboard(request):
         'is_admin': is_admin(request.user),
         'is_manager': is_manager(request.user),
         'is_staff': is_staff(request.user),
+        'pending_approvals': pending_approvals,
+        'pending_appointment_approvals': pending_appointment_approvals,
+        'pending_quick_task_approvals': pending_quick_task_approvals,
     }
 
     return render(request, 'dashboard.html', context)
@@ -729,6 +752,7 @@ def staff_commission_report(request):
         completed_appointments = Appointment.objects.filter(
             staff=staff_member,
             status='Completed',
+            approval_status='Approved',
             date__month=selected_month,
             date__year=selected_year
         ).select_related('service')
@@ -750,6 +774,7 @@ def staff_commission_report(request):
         quick_task_commission_total = QuickTaskCommission.objects.filter(
             staff=staff_member,
             quick_task__status='Completed',
+            quick_task__approval_status='Approved',
             quick_task__created_at__month=selected_month,
             quick_task__created_at__year=selected_year
         ).aggregate(total=Sum('commission_amount'))['total'] or 0
@@ -759,6 +784,7 @@ def staff_commission_report(request):
         quick_task_jobs = QuickTaskCommission.objects.filter(
             staff=staff_member,
             quick_task__status='Completed',
+            quick_task__approval_status='Approved',
             quick_task__created_at__month=selected_month,
             quick_task__created_at__year=selected_year
         ).count()
@@ -872,6 +898,7 @@ def staff_work_history(request):
     # Completed appointment work
     appointments = Appointment.objects.filter(
         status='Completed',
+        approval_status='Approved',
         date__month=selected_month,
         date__year=selected_year
     ).select_related('client', 'service', 'staff').order_by('-date', '-time')
@@ -908,6 +935,7 @@ def staff_work_history(request):
     # Quick task work
     quick_commissions = QuickTaskCommission.objects.filter(
         quick_task__status='Completed',
+        quick_task__approval_status='Approved',
         quick_task__created_at__month=selected_month,
         quick_task__created_at__year=selected_year
     ).select_related('staff', 'quick_task').order_by('-quick_task__created_at')
@@ -1172,6 +1200,7 @@ def payroll_report(request):
         completed_appointments = Appointment.objects.filter(
             staff=staff_member,
             status='Completed',
+            approval_status='Approved',
             date__range=[period_start, period_end]
         ).select_related('service')
 
@@ -1196,6 +1225,7 @@ def payroll_report(request):
         quick_task_commissions = QuickTaskCommission.objects.filter(
             staff=staff_member,
             quick_task__status='Completed',
+            quick_task__approval_status='Approved',
             quick_task__created_at__date__range=[period_start, period_end]
         ).select_related('quick_task')
 
@@ -1774,3 +1804,101 @@ def quick_task_sale(request):
         'is_admin': is_admin(request.user),
         'is_staff': is_staff(request.user),
     })
+
+@login_required
+@user_passes_test(is_admin_or_manager)
+def job_approvals(request):
+    pending_appointments = Appointment.objects.filter(
+        status='Completed',
+        approval_status='Pending'
+    ).select_related(
+        'staff',
+        'client',
+        'service'
+    ).order_by('-date')
+
+    pending_quick_tasks = QuickTaskSale.objects.filter(
+        status='Completed',
+        approval_status='Pending'
+    ).prefetch_related(
+        'staff_commissions__staff'
+    ).order_by('-created_at')
+
+    context = {
+        'pending_appointments': pending_appointments,
+        'pending_quick_tasks': pending_quick_tasks,
+    }
+
+    return render(
+        request,
+        'job_approvals.html',
+        context
+    )
+
+
+@login_required
+@user_passes_test(is_admin_or_manager)
+@require_POST
+def approve_appointment(request, appointment_id):
+    appointment = get_object_or_404(
+        Appointment,
+        id=appointment_id
+    )
+
+    appointment.approval_status = 'Approved'
+    appointment.approved_by = request.user
+    appointment.approved_at = timezone.now()
+    appointment.save()
+
+    return redirect('job_approvals')
+
+
+@login_required
+@user_passes_test(is_admin_or_manager)
+@require_POST
+def reject_appointment(request, appointment_id):
+    appointment = get_object_or_404(
+        Appointment,
+        id=appointment_id
+    )
+
+    appointment.approval_status = 'Rejected'
+    appointment.approved_by = request.user
+    appointment.approved_at = timezone.now()
+    appointment.save()
+
+    return redirect('job_approvals')
+
+
+@login_required
+@user_passes_test(is_admin_or_manager)
+@require_POST
+def approve_quick_task(request, task_id):
+    task = get_object_or_404(
+        QuickTaskSale,
+        id=task_id
+    )
+
+    task.approval_status = 'Approved'
+    task.approved_by = request.user
+    task.approved_at = timezone.now()
+    task.save()
+
+    return redirect('job_approvals')
+
+
+@login_required
+@user_passes_test(is_admin_or_manager)
+@require_POST
+def reject_quick_task(request, task_id):
+    task = get_object_or_404(
+        QuickTaskSale,
+        id=task_id
+    )
+
+    task.approval_status = 'Rejected'
+    task.approved_by = request.user
+    task.approved_at = timezone.now()
+    task.save()
+
+    return redirect('job_approvals')

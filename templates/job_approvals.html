@@ -1,0 +1,404 @@
+{% extends "base.html" %}
+
+{% block title %}Job Approvals{% endblock %}
+
+{% block content %}
+
+<style>
+    .approval-page {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+    .approval-header {
+        margin-bottom: 25px;
+    }
+
+    .approval-header h2 {
+        font-weight: 700;
+        margin-bottom: 5px;
+    }
+
+    .approval-header p {
+        color: #6b7280;
+        margin: 0;
+    }
+
+    .approval-card {
+        background: #ffffff;
+        border-radius: 14px;
+        box-shadow: 0 4px 18px rgba(0, 0, 0, 0.06);
+        overflow: hidden;
+        margin-bottom: 25px;
+    }
+
+    .approval-card-header {
+        background: #111827;
+        color: white;
+        padding: 16px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .approval-card-header h5 {
+        margin: 0;
+        font-weight: 600;
+    }
+
+    .approval-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .approval-table th {
+        background: #f9fafb;
+        padding: 14px;
+        text-align: left;
+        font-size: 13px;
+        color: #6b7280;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .approval-table td {
+        padding: 14px;
+        border-bottom: 1px solid #f1f5f9;
+        vertical-align: middle;
+    }
+
+    .status-pending {
+        display: inline-block;
+        background: #fef3c7;
+        color: #92400e;
+        padding: 5px 10px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .btn-approve,
+    .btn-reject {
+        border: none;
+        padding: 7px 12px;
+        border-radius: 7px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    .btn-approve {
+        background: #16a34a;
+        color: white;
+    }
+
+    .btn-reject {
+        background: #dc2626;
+        color: white;
+    }
+
+    .btn-approve:hover {
+        background: #15803d;
+    }
+
+    .btn-reject:hover {
+        background: #b91c1c;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 6px;
+    }
+
+    .empty-message {
+        padding: 30px;
+        text-align: center;
+        color: #6b7280;
+    }
+
+    .table-wrapper {
+        overflow-x: auto;
+    }
+</style>
+
+
+<div class="approval-page">
+
+    <div class="approval-header">
+        <h2>Job Approvals</h2>
+
+        <p>
+            Review staff work before it is counted toward
+            commission and performance.
+        </p>
+    </div>
+
+
+    <!-- ======================================== -->
+    <!-- PENDING APPOINTMENTS -->
+    <!-- ======================================== -->
+
+    <div class="approval-card">
+
+        <div class="approval-card-header">
+            <h5>Pending Appointments</h5>
+
+            <span>
+                {{ pending_appointments|length }} Pending
+            </span>
+        </div>
+
+        {% if pending_appointments %}
+
+        <div class="table-wrapper">
+
+            <table class="approval-table">
+
+                <thead>
+                    <tr>
+                        <th>Staff</th>
+                        <th>Client</th>
+                        <th>Service</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                {% for appointment in pending_appointments %}
+
+                    <tr>
+
+                        <td>
+                            <strong>
+                                {{ appointment.staff.name }}
+                            </strong>
+                        </td>
+
+                        <td>
+                            {{ appointment.client.name }}
+                        </td>
+
+                        <td>
+                            {{ appointment.service.name }}
+                        </td>
+
+                        <td>
+                            {{ appointment.date }}
+                            {{ appointment.time }}
+                        </td>
+
+                        <td>
+                            <span class="status-pending">
+                                Pending Approval
+                            </span>
+                        </td>
+
+                        <td>
+
+                            <div class="action-buttons">
+
+                                <form
+                                    method="post"
+                                    action="{% url 'approve_appointment' appointment.id %}"
+                                >
+                                    {% csrf_token %}
+
+                                    <button
+                                        type="submit"
+                                        class="btn-approve"
+                                        onclick="return confirm('Approve this appointment?');"
+                                    >
+                                        Approve
+                                    </button>
+                                </form>
+
+
+                                <form
+                                    method="post"
+                                    action="{% url 'reject_appointment' appointment.id %}"
+                                >
+                                    {% csrf_token %}
+
+                                    <button
+                                        type="submit"
+                                        class="btn-reject"
+                                        onclick="return confirm('Reject this appointment?');"
+                                    >
+                                        Reject
+                                    </button>
+                                </form>
+
+                            </div>
+
+                        </td>
+
+                    </tr>
+
+                {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+        {% else %}
+
+            <div class="empty-message">
+                No appointments are waiting for approval.
+            </div>
+
+        {% endif %}
+
+    </div>
+
+
+
+    <!-- ======================================== -->
+    <!-- PENDING QUICK TASKS -->
+    <!-- ======================================== -->
+
+    <div class="approval-card">
+
+        <div class="approval-card-header">
+
+            <h5>Pending Quick Tasks</h5>
+
+            <span>
+                {{ pending_quick_tasks|length }} Pending
+            </span>
+
+        </div>
+
+
+        {% if pending_quick_tasks %}
+
+        <div class="table-wrapper">
+
+            <table class="approval-table">
+
+                <thead>
+
+                    <tr>
+                        <th>Task</th>
+                        <th>Staff</th>
+                        <th>Client</th>
+                        <th>Amount</th>
+                        <th>Created By</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+
+                </thead>
+
+
+                <tbody>
+
+                {% for task in pending_quick_tasks %}
+
+                    <tr>
+
+                        <td>
+                            <strong>
+                                {{ task.task_name }}
+                            </strong>
+                        </td>
+                        <td>
+                            {% for commission in task.staff_commissions.all %}
+                                <strong>{{ commission.staff.name }}</strong>
+
+                                {% if not forloop.last %}
+                                    <br>
+                                {% endif %}
+                            {% empty %}
+                                <span class="text-muted">No staff assigned</span>
+                            {% endfor %}
+                        </td>
+
+                        <td>
+                            {{ task.client_name|default:"Walk-in" }}
+                        </td>
+                
+                        <td>
+                            KES {{ task.sale_amount|floatformat:2 }}
+                        </td>
+
+                        <td>
+                            {{ task.created_by.username|default:"-" }}
+                        </td>
+
+                        <td>
+                            {{ task.created_at|date:"d M Y H:i" }}
+                        </td>
+
+                        <td>
+                            <span class="status-pending">
+                                Pending Approval
+                            </span>
+                        </td>
+
+                        <td>
+
+                            <div class="action-buttons">
+
+                                <form
+                                    method="post"
+                                    action="{% url 'approve_quick_task' task.id %}"
+                                >
+                                    {% csrf_token %}
+
+                                    <button
+                                        type="submit"
+                                        class="btn-approve"
+                                        onclick="return confirm('Approve this quick task?');"
+                                    >
+                                        Approve
+                                    </button>
+                                </form>
+
+
+                                <form
+                                    method="post"
+                                    action="{% url 'reject_quick_task' task.id %}"
+                                >
+                                    {% csrf_token %}
+
+                                    <button
+                                        type="submit"
+                                        class="btn-reject"
+                                        onclick="return confirm('Reject this quick task?');"
+                                    >
+                                        Reject
+                                    </button>
+                                </form>
+
+                            </div>
+
+                        </td>
+
+                    </tr>
+
+                {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+        {% else %}
+
+            <div class="empty-message">
+                No quick tasks are waiting for approval.
+            </div>
+
+        {% endif %}
+
+    </div>
+
+</div>
+
+{% endblock %}

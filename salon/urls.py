@@ -1,4 +1,5 @@
 from django.urls import path
+from . import views
 from .views import (
     public_staff_attendance,
     public_staff_check_in,
@@ -108,4 +109,33 @@ urlpatterns = [
     path('users/reset-password/<int:user_id>/', reset_system_user_password, name='reset_system_user_password'),
     path('staff/edit/<int:staff_id>/', edit_staff, name='edit_staff'),
     path('staff/delete/<int:staff_id>/', delete_staff, name='delete_staff'),
+    path(
+        'approvals/',
+        views.job_approvals,
+        name='job_approvals'
+    ),
+
+    path(
+        'approvals/appointment/<int:appointment_id>/approve/',
+        views.approve_appointment,
+        name='approve_appointment'
+    ),
+
+    path(
+        'approvals/appointment/<int:appointment_id>/reject/',
+        views.reject_appointment,
+        name='reject_appointment'
+    ),
+
+    path(
+        'approvals/quick-task/<int:task_id>/approve/',
+        views.approve_quick_task,
+        name='approve_quick_task'
+    ),
+
+    path(
+        'approvals/quick-task/<int:task_id>/reject/',
+        views.reject_quick_task,
+        name='reject_quick_task'
+    ),
 ]

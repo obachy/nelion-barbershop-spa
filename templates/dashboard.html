@@ -184,7 +184,25 @@
             </div>
         </div>
     </div>
-     {% endif %}
+    {% endif %}
+
+    {% if is_admin or is_manager %}
+
+    <a href="{% url 'job_approvals' %}"
+
+        class="btn btn-sm btn-warning position-relative">
+
+        Approvals
+
+        {% if pending_approvals > 0 %}
+            <span class="badge bg-danger ms-1">
+                {{ pending_approvals }}
+            </span>
+        {% endif %}
+
+    </a>
+
+    {% endif %}
 
     <div class="col-12 col-lg-4">
         <div class="card chart-card shadow-sm">

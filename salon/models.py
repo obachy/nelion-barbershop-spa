@@ -71,6 +71,7 @@ class Service(models.Model):
 # =========================
 
 class Appointment(models.Model):
+
     STATUS_CHOICES = [
         ('Pending', 'Pending'),
         ('Completed', 'Completed'),
@@ -83,30 +84,65 @@ class Appointment(models.Model):
         ('Bank', 'Bank'),
     ]
 
-    client = models.ForeignKey(Client, on_delete=models.CASCADE)
-    staff = models.ForeignKey(Staff, on_delete=models.CASCADE)
-    service = models.ForeignKey(Service, on_delete=models.CASCADE)
-    date = models.DateField()
-    time = models.TimeField()
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending')
-    payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD_CHOICES, default='Cash')
+    APPROVAL_STATUS_CHOICES = [
+        ('Pending', 'Pending'),
+        ('Approved', 'Approved'),
+        ('Rejected', 'Rejected'),
+    ]
 
-    def __str__(self):
-        return f"{self.client.name} - {self.service.name}"
+    client = models.ForeignKey(
+        Client,
+        on_delete=models.CASCADE
+    )
 
-    client = models.ForeignKey(Client, on_delete=models.CASCADE)
-    staff = models.ForeignKey(Staff, on_delete=models.CASCADE)
-    service = models.ForeignKey(Service, on_delete=models.CASCADE)
+    staff = models.ForeignKey(
+        Staff,
+        on_delete=models.CASCADE
+    )
+
+    service = models.ForeignKey(
+        Service,
+        on_delete=models.CASCADE
+    )
+
     date = models.DateField()
+
     time = models.TimeField()
+
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
         default='Pending'
     )
 
+    payment_method = models.CharField(
+        max_length=20,
+        choices=PAYMENT_METHOD_CHOICES,
+        default='Cash'
+    )
+
+    # Manager / owner approval
+    approval_status = models.CharField(
+        max_length=20,
+        choices=APPROVAL_STATUS_CHOICES,
+        default='Pending'
+    )
+
+    approved_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='approved_appointments'
+    )
+
+    approved_at = models.DateTimeField(
+        null=True,
+        blank=True
+    )
+
     def __str__(self):
-        return f"{self.client} - {self.date}"
+        return f"{self.client.name} - {self.service.name}"
 
 
 # =========================
@@ -215,21 +251,83 @@ class InvoiceItem(models.Model):
         return self.description
 
 class QuickTaskSale(models.Model):
+
     STATUS_CHOICES = [
         ('Completed', 'Completed'),
         ('Cancelled', 'Cancelled'),
     ]
 
-    task_name = models.CharField(max_length=200)
-    client_name = models.CharField(max_length=100, blank=True, null=True)
-    client_phone = models.CharField(max_length=20, blank=True, null=True)
-    sale_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Completed')
-    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, blank=True, null=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+    APPROVAL_STATUS_CHOICES = [
+        ('Pending', 'Pending'),
+        ('Approved', 'Approved'),
+        ('Rejected', 'Rejected'),
+    ]
+
+    task_name = models.CharField(
+        max_length=200
+    )
+
+    client_name = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True
+    )
+
+    client_phone = models.CharField(
+        max_length=20,
+        blank=True,
+        null=True
+    )
+
+    sale_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0
+    )
+
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='Completed'
+    )
+
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        related_name='created_quick_tasks'
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    # Manager / owner approval
+    approval_status = models.CharField(
+        max_length=20,
+        choices=APPROVAL_STATUS_CHOICES,
+        default='Pending'
+    )
+
+    approved_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        related_name='approved_quick_tasks'
+    )
+
+    approved_at = models.DateTimeField(
+        blank=True,
+        null=True
+    )
 
     def total_commission(self):
-        return sum(item.commission_amount for item in self.staff_commissions.all())
+        return sum(
+            item.commission_amount
+            for item in self.staff_commissions.all()
+        )
 
     def __str__(self):
         return self.task_name
