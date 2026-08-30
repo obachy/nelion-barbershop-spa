@@ -284,6 +284,7 @@
                     <tr>
                         <th>Task</th>
                         <th>Staff</th>
+                        <th>Commission</th>
                         <th>Client</th>
                         <th>Amount</th>
                         <th>Created By</th>
@@ -308,13 +309,19 @@
                         </td>
                         <td>
                             {% for commission in task.staff_commissions.all %}
-                                <strong>{{ commission.staff.name }}</strong>
-
-                                {% if not forloop.last %}
-                                    <br>
-                                {% endif %}
+                                {{ commission.staff.name }}
+                                {% if not forloop.last %}<br>{% endif %}
                             {% empty %}
-                                <span class="text-muted">No staff assigned</span>
+                                No staff assigned
+                            {% endfor %}
+                        </td>
+
+                        <td>
+                            {% for commission in task.staff_commissions.all %}
+                                <strong>KES {{ commission.commission_amount|floatformat:2 }}</strong>
+                                {% if not forloop.last %}<br>{% endif %}
+                            {% empty %}
+                                KES 0.00
                             {% endfor %}
                         </td>
 

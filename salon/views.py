@@ -889,8 +889,14 @@ def walk_in_customer(request):
 def staff_work_history(request):
     today = timezone.localdate()
 
-    selected_month = int(request.GET.get('month') or today.month)
-    selected_year = int(request.GET.get('year') or today.year)
+    selected_month = int(
+        request.GET.get('month') or today.month
+    )
+
+    selected_year = int(
+        request.GET.get('year') or today.year
+    )
+
     staff_id = request.GET.get('staff')
 
     work_rows = []
@@ -901,30 +907,66 @@ def staff_work_history(request):
         approval_status='Approved',
         date__month=selected_month,
         date__year=selected_year
-    ).select_related('client', 'service', 'staff').order_by('-date', '-time')
+    ).select_related(
+        'client',
+        'service',
+        'staff'
+    ).order_by(
+        '-date',
+        '-time'
+    )
 
     if staff_id:
-        appointments = appointments.filter(staff_id=staff_id)
+        appointments = appointments.filter(
+            staff_id=staff_id
+        )
 
     for appointment in appointments:
-        service_price = Decimal(str(appointment.service.price or 0))
-        commission_percent = Decimal(str(appointment.service.commission_percent or 0))
-        commission_amount = Decimal(str(appointment.service.commission_amount or 0))
+
+        service_price = Decimal(
+            str(appointment.service.price or 0)
+        )
+
+        commission_percent = Decimal(
+            str(
+                appointment.service.commission_percent
+                or 0
+            )
+        )
+
+        commission_amount = Decimal(
+            str(
+                appointment.service.commission_amount
+                or 0
+            )
+        )
 
         if commission_amount > 0:
             earned_commission = commission_amount
         else:
-            earned_commission = (service_price * commission_percent) / Decimal('100')
+            earned_commission = (
+                service_price * commission_percent
+            ) / Decimal('100')
 
         client_phone = ''
+
         if appointment.client:
-            client_phone = getattr(appointment.client, 'phone', '') or ''
+            client_phone = getattr(
+                appointment.client,
+                'phone',
+                ''
+            ) or ''
 
         work_rows.append({
+            'object_id': appointment.id,
             'date': appointment.date,
             'time': appointment.time,
             'staff': appointment.staff,
-            'client_name': appointment.client.name if appointment.client else 'Walk-in',
+            'client_name': (
+                appointment.client.name
+                if appointment.client
+                else 'Walk-in'
+            ),
             'client_phone': client_phone,
             'work_type': 'Appointment',
             'task_name': appointment.service.name,
@@ -938,20 +980,37 @@ def staff_work_history(request):
         quick_task__approval_status='Approved',
         quick_task__created_at__month=selected_month,
         quick_task__created_at__year=selected_year
-    ).select_related('staff', 'quick_task').order_by('-quick_task__created_at')
+    ).select_related(
+        'staff',
+        'quick_task'
+    ).order_by(
+        '-quick_task__created_at'
+    )
 
     if staff_id:
-        quick_commissions = quick_commissions.filter(staff_id=staff_id)
+        quick_commissions = quick_commissions.filter(
+            staff_id=staff_id
+        )
 
     for item in quick_commissions:
-        local_created = timezone.localtime(item.quick_task.created_at)
+
+        local_created = timezone.localtime(
+            item.quick_task.created_at
+        )
 
         work_rows.append({
+            'object_id': item.quick_task.id,
             'date': local_created.date(),
             'time': local_created.time(),
             'staff': item.staff,
-            'client_name': item.quick_task.client_name or 'Walk-in',
-            'client_phone': item.quick_task.client_phone or '',
+            'client_name': (
+                item.quick_task.client_name
+                or 'Walk-in'
+            ),
+            'client_phone': (
+                item.quick_task.client_phone
+                or ''
+            ),
             'work_type': 'Quick Task',
             'task_name': item.quick_task.task_name,
             'sale_amount': item.quick_task.sale_amount,
@@ -960,32 +1019,53 @@ def staff_work_history(request):
 
     work_rows = sorted(
         work_rows,
-        key=lambda row: (row['date'], row['time']),
+        key=lambda row: (
+            row['date'],
+            row['time']
+        ),
         reverse=True
     )
 
-    staff_list = Staff.objects.all().order_by('name')
+    staff_list = Staff.objects.all().order_by(
+        'name'
+    )
 
     months = [
-        (1, 'January'), (2, 'February'), (3, 'March'),
-        (4, 'April'), (5, 'May'), (6, 'June'),
-        (7, 'July'), (8, 'August'), (9, 'September'),
-        (10, 'October'), (11, 'November'), (12, 'December'),
+        (1, 'January'),
+        (2, 'February'),
+        (3, 'March'),
+        (4, 'April'),
+        (5, 'May'),
+        (6, 'June'),
+        (7, 'July'),
+        (8, 'August'),
+        (9, 'September'),
+        (10, 'October'),
+        (11, 'November'),
+        (12, 'December'),
     ]
 
-    years = range(today.year - 2, today.year + 2)
+    years = range(
+        today.year - 2,
+        today.year + 2
+    )
 
-    return render(request, 'staff_work_history.html', {
-        'work_rows': work_rows,
-        'staff_list': staff_list,
-        'selected_staff': staff_id,
-        'selected_month': selected_month,
-        'selected_year': selected_year,
-        'months': months,
-        'years': years,
-        'is_admin': is_admin(request.user),
-        'is_staff': is_staff(request.user),
-    })
+    return render(
+        request,
+        'staff_work_history.html',
+        {
+            'work_rows': work_rows,
+            'staff_list': staff_list,
+            'selected_staff': staff_id,
+            'selected_month': selected_month,
+            'selected_year': selected_year,
+            'months': months,
+            'years': years,
+            'is_admin': is_admin(request.user),
+            'is_staff': is_staff(request.user),
+        }
+    )
+
 @login_required
 def book_appointment(request):
     if request.method == 'POST':
@@ -1902,3 +1982,99 @@ def reject_quick_task(request, task_id):
     task.save()
 
     return redirect('job_approvals')
+
+from decimal import Decimal
+
+@login_required
+@user_passes_test(is_admin)
+def edit_completed_appointment(request, appointment_id):
+    appointment = get_object_or_404(
+        Appointment,
+        id=appointment_id,
+        status='Completed'
+    )
+
+    if request.method == 'POST':
+        appointment.staff = get_object_or_404(
+            Staff,
+            id=request.POST.get('staff')
+        )
+
+        appointment.service = get_object_or_404(
+            Service,
+            id=request.POST.get('service')
+        )
+
+        appointment.date = request.POST.get('date')
+        appointment.time = request.POST.get('time')
+        appointment.payment_method = request.POST.get('payment_method')
+
+        appointment.save()
+
+        messages.success(
+            request,
+            "Completed appointment updated successfully."
+        )
+
+        return redirect('staff_work_history')
+
+    return render(
+        request,
+        'edit_completed_appointment.html',
+        {
+            'appointment': appointment,
+            'staff_list': Staff.objects.all().order_by('name'),
+            'services': Service.objects.all().order_by('name'),
+        }
+    )
+
+
+@login_required
+@user_passes_test(is_admin)
+def edit_completed_quick_task(request, task_id):
+    task = get_object_or_404(
+        QuickTaskSale,
+        id=task_id,
+        status='Completed'
+    )
+
+    commissions = task.staff_commissions.select_related('staff').all()
+
+    if request.method == 'POST':
+        task.task_name = request.POST.get('task_name')
+        task.client_name = request.POST.get('client_name')
+        task.client_phone = request.POST.get('client_phone')
+
+        sale_amount = request.POST.get('sale_amount')
+
+        if sale_amount:
+            task.sale_amount = Decimal(sale_amount)
+
+        task.save()
+
+        for commission in commissions:
+            new_amount = request.POST.get(
+                f'commission_{commission.id}'
+            )
+
+            if new_amount is not None:
+                commission.commission_amount = Decimal(
+                    new_amount or '0'
+                )
+                commission.save()
+
+        messages.success(
+            request,
+            "Completed quick task updated successfully."
+        )
+
+        return redirect('staff_work_history')
+
+    return render(
+        request,
+        'edit_completed_quick_task.html',
+        {
+            'task': task,
+            'commissions': commissions,
+        }
+    )

@@ -138,4 +138,16 @@ urlpatterns = [
         views.reject_quick_task,
         name='reject_quick_task'
     ),
-]
+
+    path(
+        'work-history/appointment/<int:appointment_id>/edit/',
+        views.edit_completed_appointment,
+        name='edit_completed_appointment'
+    ),
+
+    path(
+        'work-history/quick-task/<int:task_id>/edit/',
+        views.edit_completed_quick_task,
+        name='edit_completed_quick_task'
+    ),
+    ]
