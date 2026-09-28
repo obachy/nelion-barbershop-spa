@@ -384,8 +384,9 @@ def delete_appointment(request, appointment_id):
 def clients_list(request):
     clients = Client.objects.all().order_by('name')
     return render(request, 'clients.html', {'clients': clients})
+
 @login_required
-@user_passes_test(is_admin_or_staff)
+@user_passes_test(is_admin_or_manager)
 def edit_client(request, client_id):
     client = get_object_or_404(Client, id=client_id)
 
@@ -514,6 +515,130 @@ def edit_staff(request, staff_id):
         'staff_member': staff_member,
         'is_admin': is_admin(request.user),
         'is_staff': is_staff(request.user),
+    })
+
+@login_required
+@user_passes_test(is_staff)
+def my_commission(request):
+    today = timezone.localdate()
+
+    selected_month = int(request.GET.get('month') or today.month)
+    selected_year = int(request.GET.get('year') or today.year)
+
+    # Same period as payroll: previous month 28th to selected month 27th
+    period_end = date(selected_year, selected_month, 27)
+
+    if selected_month == 1:
+        period_start = date(selected_year - 1, 12, 28)
+    else:
+        period_start = date(selected_year, selected_month - 1, 28)
+
+    staff = get_object_or_404(Staff, user=request.user)
+
+    # Approved completed appointments
+    appointments = Appointment.objects.filter(
+        staff=staff,
+        status='Completed',
+        approval_status='Approved',
+        date__range=[period_start, period_end]
+    ).select_related('service', 'client').order_by('-date', '-time')
+
+    appointment_rows = []
+    appointment_total = Decimal('0')
+
+    for appointment in appointments:
+        service_price = Decimal(str(appointment.service.price or 0))
+        commission_percent = Decimal(
+            str(appointment.service.commission_percent or 0)
+        )
+        commission_amount = Decimal(
+            str(appointment.service.commission_amount or 0)
+        )
+
+        if commission_amount > 0:
+            earned = commission_amount
+        else:
+            earned = (
+                service_price * commission_percent
+            ) / Decimal('100')
+
+        appointment_total += earned
+
+        appointment_rows.append({
+            'date': appointment.date,
+            'type': 'Service',
+            'task': appointment.service.name,
+            'amount': service_price,
+            'commission': earned,
+        })
+
+    # Approved quick tasks
+    quick_commissions = QuickTaskCommission.objects.filter(
+        staff=staff,
+        quick_task__status='Completed',
+        quick_task__approval_status='Approved',
+        quick_task__created_at__date__range=[
+            period_start,
+            period_end
+        ]
+    ).select_related('quick_task').order_by(
+        '-quick_task__created_at'
+    )
+
+    quick_rows = []
+    quick_total = Decimal('0')
+
+    for item in quick_commissions:
+        quick_total += item.commission_amount
+
+        quick_rows.append({
+            'date': timezone.localtime(
+                item.quick_task.created_at
+            ).date(),
+            'type': 'Quick Task',
+            'task': item.quick_task.task_name,
+            'amount': item.quick_task.sale_amount,
+            'commission': item.commission_amount,
+        })
+
+    rows = appointment_rows + quick_rows
+
+    rows.sort(
+        key=lambda row: row['date'],
+        reverse=True
+    )
+
+    total_commission = appointment_total + quick_total
+
+    months = [
+        (1, 'January'),
+        (2, 'February'),
+        (3, 'March'),
+        (4, 'April'),
+        (5, 'May'),
+        (6, 'June'),
+        (7, 'July'),
+        (8, 'August'),
+        (9, 'September'),
+        (10, 'October'),
+        (11, 'November'),
+        (12, 'December'),
+    ]
+
+    years = range(today.year - 2, today.year + 2)
+
+    return render(request, 'my_commission.html', {
+        'staff': staff,
+        'rows': rows,
+        'total_commission': total_commission,
+        'appointment_total': appointment_total,
+        'quick_total': quick_total,
+        'selected_month': selected_month,
+        'selected_year': selected_year,
+        'months': months,
+        'years': years,
+        'period_start': period_start,
+        'period_end': period_end,
     })
 
 
@@ -741,63 +866,88 @@ def ajax_available_staff(request):
 @login_required
 @user_passes_test(is_admin)
 def staff_commission_report(request):
-    today = timezone.localdate()
+    today = date.today()
 
     selected_month = int(request.GET.get('month') or today.month)
     selected_year = int(request.GET.get('year') or today.year)
 
+    # Same period as Payroll:
+    # previous month 28th -> selected month 27th
+    period_end = date(selected_year, selected_month, 27)
+
+    if selected_month == 1:
+        period_start = date(selected_year - 1, 12, 28)
+    else:
+        period_start = date(selected_year, selected_month - 1, 28)
+
     commission_rows = []
 
     for staff_member in Staff.objects.all().order_by('name'):
+
         completed_appointments = Appointment.objects.filter(
             staff=staff_member,
             status='Completed',
             approval_status='Approved',
-            date__month=selected_month,
-            date__year=selected_year
+            date__range=[period_start, period_end]
         ).select_related('service')
 
         appointment_commission_total = Decimal('0')
 
         for appointment in completed_appointments:
             service_price = Decimal(str(appointment.service.price or 0))
-            commission_percent = Decimal(str(appointment.service.commission_percent or 0))
-            commission_amount = Decimal(str(appointment.service.commission_amount or 0))
+            commission_percent = Decimal(
+                str(appointment.service.commission_percent or 0)
+            )
+            commission_amount = Decimal(
+                str(appointment.service.commission_amount or 0)
+            )
 
             if commission_amount > 0:
                 earned_commission = commission_amount
             else:
-                earned_commission = (service_price * commission_percent) / Decimal('100')
+                earned_commission = (
+                    service_price * commission_percent
+                ) / Decimal('100')
 
             appointment_commission_total += earned_commission
 
-        quick_task_commission_total = QuickTaskCommission.objects.filter(
+        quick_task_commissions = QuickTaskCommission.objects.filter(
             staff=staff_member,
             quick_task__status='Completed',
             quick_task__approval_status='Approved',
-            quick_task__created_at__month=selected_month,
-            quick_task__created_at__year=selected_year
-        ).aggregate(total=Sum('commission_amount'))['total'] or 0
+            quick_task__created_at__date__range=[
+                period_start,
+                period_end
+            ]
+        )
 
-        quick_task_commission_total = Decimal(str(quick_task_commission_total))
+        quick_task_jobs = quick_task_commissions.count()
 
-        quick_task_jobs = QuickTaskCommission.objects.filter(
-            staff=staff_member,
-            quick_task__status='Completed',
-            quick_task__approval_status='Approved',
-            quick_task__created_at__month=selected_month,
-            quick_task__created_at__year=selected_year
-        ).count()
+        quick_task_commission_total = quick_task_commissions.aggregate(
+            total=Sum('commission_amount')
+        )['total'] or 0
 
-        total_commission = appointment_commission_total + quick_task_commission_total
+        quick_task_commission_total = Decimal(
+            str(quick_task_commission_total)
+        )
+
+        total_commission = (
+            appointment_commission_total +
+            quick_task_commission_total
+        )
 
         commission_rows.append({
             'staff': staff_member,
             'appointment_jobs': completed_appointments.count(),
             'quick_task_jobs': quick_task_jobs,
-            'total_jobs': completed_appointments.count() + quick_task_jobs,
-            'appointment_commission_total': appointment_commission_total,
-            'quick_task_commission_total': quick_task_commission_total,
+            'total_jobs': (
+                completed_appointments.count() +
+                quick_task_jobs
+            ),
+            'appointment_commission_total':
+                appointment_commission_total,
+            'quick_task_commission_total':
+                quick_task_commission_total,
             'total_commission': total_commission,
         })
 
@@ -816,10 +966,11 @@ def staff_commission_report(request):
         'selected_year': selected_year,
         'months': months,
         'years': years,
+        'period_start': period_start,
+        'period_end': period_end,
         'is_admin': is_admin(request.user),
         'is_staff': is_staff(request.user),
     })
-
 
 @login_required
 def complete_appointment(request, appointment_id):

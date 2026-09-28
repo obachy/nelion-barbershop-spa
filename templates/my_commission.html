@@ -1,0 +1,181 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="container-fluid py-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">My Commission</h2>
+            <p class="text-muted mb-0">
+                {{ staff.name }}
+            </p>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+
+            <form method="get" class="row g-3 align-items-end">
+
+                <div class="col-md-4">
+                    <label class="form-label">Month</label>
+
+                    <select name="month" class="form-select">
+                        {% for number, name in months %}
+                            <option
+                                value="{{ number }}"
+                                {% if number == selected_month %}selected{% endif %}
+                            >
+                                {{ name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">Year</label>
+
+                    <select name="year" class="form-select">
+                        {% for year in years %}
+                            <option
+                                value="{{ year }}"
+                                {% if year == selected_year %}selected{% endif %}
+                            >
+                                {{ year }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-4">
+                    <button class="btn btn-dark w-100">
+                        View Commission
+                    </button>
+                </div>
+
+            </form>
+
+            <div class="mt-3 text-muted">
+                <strong>Commission Period:</strong>
+                {{ period_start|date:"d M Y" }} – {{ period_end|date:"d M Y" }}
+            </div>
+
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+
+        <div class="col-md-4">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <small class="text-muted">
+                        Service Commission
+                    </small>
+
+                    <h3 class="mt-2">
+                        KES {{ appointment_total|floatformat:2 }}
+                    </h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <small class="text-muted">
+                        Quick Task Commission
+                    </small>
+
+                    <h3 class="mt-2">
+                        KES {{ quick_total|floatformat:2 }}
+                    </h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card shadow-sm border-success">
+                <div class="card-body">
+                    <small class="text-muted">
+                        Total Commission
+                    </small>
+
+                    <h3 class="mt-2 text-success">
+                        KES {{ total_commission|floatformat:2 }}
+                    </h3>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="card shadow-sm">
+
+        <div class="card-header">
+            <strong>Commission History</strong>
+        </div>
+
+        <div class="table-responsive">
+
+            <table class="table table-hover align-middle mb-0">
+
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Work</th>
+                        <th>Sale Amount</th>
+                        <th>Commission</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    {% for row in rows %}
+
+                    <tr>
+                        <td>
+                            {{ row.date|date:"d M Y" }}
+                        </td>
+
+                        <td>
+                            {{ row.type }}
+                        </td>
+
+                        <td>
+                            {{ row.task }}
+                        </td>
+
+                        <td>
+                            KES {{ row.amount|floatformat:2 }}
+                        </td>
+
+                        <td>
+                            <strong>
+                                KES {{ row.commission|floatformat:2 }}
+                            </strong>
+                        </td>
+                    </tr>
+
+                    {% empty %}
+
+                    <tr>
+                        <td colspan="5" class="text-center py-5 text-muted">
+                            No approved commission found for this period.
+                        </td>
+                    </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

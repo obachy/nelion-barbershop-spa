@@ -261,6 +261,11 @@
                 <a href="/staff/work-history/">📊 Work History</a>
             {% endif %}
 
+            {% if is_staff %}
+            <a href="{% url 'my_commission' %}">💰 My Commission</a>
+            </a>
+            {% endif %}
+
             <a href="/logout/">🚪 Logout</a>
 
         </div>

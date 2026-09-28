@@ -150,4 +150,9 @@ urlpatterns = [
         views.edit_completed_quick_task,
         name='edit_completed_quick_task'
     ),
+    path(
+        'my-commission/',
+        views.my_commission,
+        name='my_commission'
+    ),
     ]

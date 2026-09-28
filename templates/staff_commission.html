@@ -315,7 +315,7 @@
                 </div>
 
                 <div class="report-period">
-                    Period: {{ selected_month }}/{{ selected_year }}
+                    Period: {{ period_start|date:"d M Y" }} – {{ period_end|date:"d M Y" }}
                 </div>
             </div>
 

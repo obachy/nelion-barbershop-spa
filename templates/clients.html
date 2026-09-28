@@ -344,13 +344,16 @@
 
                             <td class="text-end">
 
+                                {% if is_admin or is_manager %}
                                 <a
                                     href="/clients/edit/{{ client.id }}/"
                                     class="btn btn-outline-dark btn-sm action-btn"
                                 >
                                     Edit
                                 </a>
-
+                                {% else %}
+                                    <span class="text-muted">View only</span>
+                                {% endif %}
                             </td>
 
                         </tr>
