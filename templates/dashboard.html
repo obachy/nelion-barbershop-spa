@@ -142,6 +142,35 @@
 
 <div class="row g-4 mb-4">
 
+    {% if is_admin or is_manager %}
+    <div class="col-12">
+        <div class="card chart-card shadow-sm">
+            <div class="card-body">
+                <div class="d-flex flex-column flex-md-row justify-content-between mb-3 gap-2">
+                    <div>
+                        <h6 class="fw-bold mb-0">Financial Overview</h6>
+                        <small class="text-muted">
+                            Sales, commission, penalties, expenses and profit:
+                            {{ financial_period_start|date:"d M Y" }} to
+                            {{ financial_period_end|date:"d M Y" }}
+                        </small>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="chart-icon">📊</div>
+                        <a href="{% url 'financial_report' %}" class="btn btn-sm btn-outline-dark">
+                            Full Financial Report
+                        </a>
+                    </div>
+                </div>
+
+                <div class="chart-box">
+                    <canvas id="financialOverviewChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     {% if is_admin %}
     <div class="col-lg-6">
         <div class="card chart-card shadow-sm">
@@ -332,6 +361,9 @@
     const commissionLabels = {{ commission_labels|default:"[]"|safe }};
     const commissionTotals = {{ commission_totals|default:"[]"|safe }};
 
+    const financialLabels = {{ financial_labels|default:"[]"|safe }};
+    const financialValues = {{ financial_values|default:"[]"|safe }};
+
     function barChart(canvasId, labels, data, label) {
         const canvas = document.getElementById(canvasId);
 
@@ -461,6 +493,15 @@
 
     if (document.getElementById('staffCommissionChart')) {
         moneyBarChart('staffCommissionChart', commissionLabels, commissionTotals, 'Commission');
+    }
+
+    if (document.getElementById('financialOverviewChart')) {
+        moneyBarChart(
+            'financialOverviewChart',
+            financialLabels,
+            financialValues,
+            'Financial Overview'
+        );
     }
 </script>
 
