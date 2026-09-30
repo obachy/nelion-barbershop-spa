@@ -6,7 +6,7 @@ from django.db.models import Sum
 from django.shortcuts import render
 from django.utils import timezone
 
-from .models import Appointment, Expense, QuickTaskCommission, QuickTaskSale
+from .models import Appointment, Expense, QuickTaskCommission, QuickTaskSale, StaffPenalty
 
 
 def is_admin_or_manager(user):
@@ -99,6 +99,19 @@ def financial_report(request):
     )
 
     # -------------------------
+    # STAFF PENALTIES
+    # Penalties reduce the amount actually paid out to staff.
+    # -------------------------
+    total_penalties = StaffPenalty.objects.filter(
+        date__range=[period_start, period_end],
+    ).aggregate(
+        total=Sum('amount')
+    )['total'] or Decimal('0')
+
+    total_penalties = Decimal(str(total_penalties))
+    net_staff_payout = total_commission - total_penalties
+
+    # -------------------------
     # EXPENSES
     # Only paid expenses/bills reduce realised net profit.
     # -------------------------
@@ -126,7 +139,7 @@ def financial_report(request):
     # -------------------------
     # NET PROFIT
     # -------------------------
-    net_profit = total_sales - total_commission - total_expenses
+    net_profit = total_sales - net_staff_payout - total_expenses
 
     months = [
         (1, 'January'), (2, 'February'), (3, 'March'),
@@ -152,6 +165,8 @@ def financial_report(request):
         'appointment_commission': appointment_commission,
         'quick_task_commission': quick_task_commission,
         'total_commission': total_commission,
+        'total_penalties': total_penalties,
+        'net_staff_payout': net_staff_payout,
 
         'total_expenses': total_expenses,
         'unpaid_bills': unpaid_bills,
