@@ -411,6 +411,118 @@ def dashboard(request):
         float(financial_net_profit),
     ]
 
+    # Business growth: last 6 financial periods (28th -> 27th),
+    # including the current period to date.
+    growth_labels = []
+    growth_sales = []
+    growth_profit = []
+
+    def shift_month(year, month, offset):
+        month_index = (year * 12 + (month - 1)) + offset
+        return month_index // 12, (month_index % 12) + 1
+
+    active_end_year = financial_period_end.year
+    active_end_month = financial_period_end.month
+
+    for offset in range(-5, 1):
+        growth_year, growth_month = shift_month(
+            active_end_year,
+            active_end_month,
+            offset
+        )
+
+        growth_period_end = date(growth_year, growth_month, 27)
+        start_year, start_month = shift_month(
+            growth_year,
+            growth_month,
+            -1
+        )
+        growth_period_start = date(start_year, start_month, 28)
+
+        growth_appointments = Appointment.objects.filter(
+            status='Completed',
+            approval_status='Approved',
+            date__range=[growth_period_start, growth_period_end]
+        ).select_related('service')
+
+        growth_appointment_sales = growth_appointments.aggregate(
+            total=Sum('service__price')
+        )['total'] or 0
+
+        growth_quick_sales = QuickTaskSale.objects.filter(
+            status='Completed',
+            approval_status='Approved',
+            created_at__date__range=[
+                growth_period_start,
+                growth_period_end
+            ]
+        ).aggregate(total=Sum('sale_amount'))['total'] or 0
+
+        growth_total_sales = (
+            Decimal(str(growth_appointment_sales))
+            + Decimal(str(growth_quick_sales))
+        )
+
+        growth_appointment_commission = Decimal('0')
+
+        for appointment in growth_appointments:
+            service_price = Decimal(str(appointment.service.price or 0))
+            commission_percent = Decimal(
+                str(appointment.service.commission_percent or 0)
+            )
+            commission_amount = Decimal(
+                str(appointment.service.commission_amount or 0)
+            )
+
+            if commission_amount > 0:
+                earned_commission = commission_amount
+            else:
+                earned_commission = (
+                    service_price * commission_percent
+                ) / Decimal('100')
+
+            growth_appointment_commission += earned_commission
+
+        growth_quick_commission = QuickTaskCommission.objects.filter(
+            quick_task__status='Completed',
+            quick_task__approval_status='Approved',
+            quick_task__created_at__date__range=[
+                growth_period_start,
+                growth_period_end
+            ]
+        ).aggregate(total=Sum('commission_amount'))['total'] or 0
+
+        growth_total_commission = (
+            growth_appointment_commission
+            + Decimal(str(growth_quick_commission))
+        )
+
+        growth_penalties = StaffPenalty.objects.filter(
+            date__range=[growth_period_start, growth_period_end]
+        ).aggregate(total=Sum('amount'))['total'] or 0
+
+        growth_net_staff_payout = (
+            growth_total_commission - Decimal(str(growth_penalties))
+        )
+
+        growth_expenses = Expense.objects.filter(
+            status='Paid',
+            expense_date__range=[
+                growth_period_start,
+                growth_period_end
+            ]
+        ).aggregate(total=Sum('amount'))['total'] or 0
+
+        growth_net_profit = (
+            growth_total_sales
+            - growth_net_staff_payout
+            - Decimal(str(growth_expenses))
+        )
+
+        growth_labels.append(growth_period_end.strftime('%b %Y'))
+        growth_sales.append(float(growth_total_sales))
+        growth_profit.append(float(growth_net_profit))
+
     # Invoice totals
     paid_invoice_total = Decimal('0')
     unpaid_invoice_total = Decimal('0')
@@ -477,6 +589,18 @@ def dashboard(request):
         ),
         'financial_values': json.dumps(
             financial_values,
+            cls=DjangoJSONEncoder
+        ),
+        'growth_labels': json.dumps(
+            growth_labels,
+            cls=DjangoJSONEncoder
+        ),
+        'growth_sales': json.dumps(
+            growth_sales,
+            cls=DjangoJSONEncoder
+        ),
+        'growth_profit': json.dumps(
+            growth_profit,
             cls=DjangoJSONEncoder
         ),
 
