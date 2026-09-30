@@ -300,6 +300,117 @@ def dashboard(request):
         # Add each staff member's commission to dashboard total
         staff_commission_total += total_commission
 
+    # Financial overview for the active 28th -> 27th period
+    if today.day >= 28:
+        financial_period_start = today.replace(day=28)
+
+        if today.month == 12:
+            financial_period_end = date(today.year + 1, 1, 27)
+        else:
+            financial_period_end = date(today.year, today.month + 1, 27)
+    else:
+        financial_period_end = today.replace(day=27)
+
+        if today.month == 1:
+            financial_period_start = date(today.year - 1, 12, 28)
+        else:
+            financial_period_start = date(today.year, today.month - 1, 28)
+
+    financial_appointments = Appointment.objects.filter(
+        status='Completed',
+        approval_status='Approved',
+        date__range=[financial_period_start, financial_period_end]
+    ).select_related('service')
+
+    financial_appointment_sales = financial_appointments.aggregate(
+        total=Sum('service__price')
+    )['total'] or 0
+
+    financial_quick_sales = QuickTaskSale.objects.filter(
+        status='Completed',
+        approval_status='Approved',
+        created_at__date__range=[financial_period_start, financial_period_end]
+    ).aggregate(total=Sum('sale_amount'))['total'] or 0
+
+    financial_total_sales = (
+        Decimal(str(financial_appointment_sales))
+        + Decimal(str(financial_quick_sales))
+    )
+
+    financial_appointment_commission = Decimal('0')
+
+    for appointment in financial_appointments:
+        service_price = Decimal(str(appointment.service.price or 0))
+        commission_percent = Decimal(
+            str(appointment.service.commission_percent or 0)
+        )
+        commission_amount = Decimal(
+            str(appointment.service.commission_amount or 0)
+        )
+
+        if commission_amount > 0:
+            earned_commission = commission_amount
+        else:
+            earned_commission = (
+                service_price * commission_percent
+            ) / Decimal('100')
+
+        financial_appointment_commission += earned_commission
+
+    financial_quick_commission = QuickTaskCommission.objects.filter(
+        quick_task__status='Completed',
+        quick_task__approval_status='Approved',
+        quick_task__created_at__date__range=[
+            financial_period_start,
+            financial_period_end
+        ]
+    ).aggregate(total=Sum('commission_amount'))['total'] or 0
+
+    financial_total_commission = (
+        financial_appointment_commission
+        + Decimal(str(financial_quick_commission))
+    )
+
+    financial_total_penalties = StaffPenalty.objects.filter(
+        date__range=[financial_period_start, financial_period_end]
+    ).aggregate(total=Sum('amount'))['total'] or 0
+
+    financial_total_penalties = Decimal(str(financial_total_penalties))
+    financial_net_staff_payout = (
+        financial_total_commission - financial_total_penalties
+    )
+
+    financial_total_expenses = Expense.objects.filter(
+        status='Paid',
+        expense_date__range=[financial_period_start, financial_period_end]
+    ).aggregate(total=Sum('amount'))['total'] or 0
+
+    financial_total_expenses = Decimal(str(financial_total_expenses))
+
+    financial_net_profit = (
+        financial_total_sales
+        - financial_net_staff_payout
+        - financial_total_expenses
+    )
+
+    financial_labels = [
+        'Sales',
+        'Commission',
+        'Penalties',
+        'Net Staff Payout',
+        'Expenses',
+        'Net Profit',
+    ]
+
+    financial_values = [
+        float(financial_total_sales),
+        float(financial_total_commission),
+        float(financial_total_penalties),
+        float(financial_net_staff_payout),
+        float(financial_total_expenses),
+        float(financial_net_profit),
+    ]
+
     # Invoice totals
     paid_invoice_total = Decimal('0')
     unpaid_invoice_total = Decimal('0')
@@ -357,6 +468,17 @@ def dashboard(request):
         'paid_invoice_total': paid_invoice_total,
         'unpaid_invoice_total': unpaid_invoice_total,
         'staff_commission_total': staff_commission_total,
+
+        'financial_period_start': financial_period_start,
+        'financial_period_end': financial_period_end,
+        'financial_labels': json.dumps(
+            financial_labels,
+            cls=DjangoJSONEncoder
+        ),
+        'financial_values': json.dumps(
+            financial_values,
+            cls=DjangoJSONEncoder
+        ),
 
         'is_admin': is_admin(request.user),
         'is_manager': is_manager(request.user),
