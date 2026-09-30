@@ -297,8 +297,8 @@ def dashboard(request):
         commission_labels.append(staff_member.name)
         commission_totals.append(float(total_commission))
 
-        if not is_admin(request.user):
-            staff_commission_total = total_commission
+        # Add each staff member's commission to dashboard total
+        staff_commission_total += total_commission
 
     # Invoice totals
     paid_invoice_total = Decimal('0')
