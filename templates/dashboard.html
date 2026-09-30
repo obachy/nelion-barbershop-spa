@@ -148,11 +148,10 @@
             <div class="card-body">
                 <div class="d-flex flex-column flex-md-row justify-content-between mb-3 gap-2">
                     <div>
-                        <h6 class="fw-bold mb-0">Financial Overview</h6>
+                        <h6 class="fw-bold mb-0">Business Growth</h6>
                         <small class="text-muted">
-                            Sales, commission, penalties, expenses and profit:
-                            {{ financial_period_start|date:"d M Y" }} to
-                            {{ financial_period_end|date:"d M Y" }}
+                            Sales and net profit trend across the last 6 financial periods
+                            (28th to 27th)
                         </small>
                     </div>
                     <div class="d-flex align-items-center gap-2">
@@ -164,7 +163,7 @@
                 </div>
 
                 <div class="chart-box">
-                    <canvas id="financialOverviewChart"></canvas>
+                    <canvas id="businessGrowthChart"></canvas>
                 </div>
             </div>
         </div>
@@ -364,6 +363,10 @@
     const financialLabels = {{ financial_labels|default:"[]"|safe }};
     const financialValues = {{ financial_values|default:"[]"|safe }};
 
+    const growthLabels = {{ growth_labels|default:"[]"|safe }};
+    const growthSales = {{ growth_sales|default:"[]"|safe }};
+    const growthProfit = {{ growth_profit|default:"[]"|safe }};
+
     function barChart(canvasId, labels, data, label) {
         const canvas = document.getElementById(canvasId);
 
@@ -495,13 +498,65 @@
         moneyBarChart('staffCommissionChart', commissionLabels, commissionTotals, 'Commission');
     }
 
-    if (document.getElementById('financialOverviewChart')) {
-        moneyBarChart(
-            'financialOverviewChart',
-            financialLabels,
-            financialValues,
-            'Financial Overview'
-        );
+    const businessGrowthCanvas = document.getElementById('businessGrowthChart');
+
+    if (businessGrowthCanvas) {
+        new Chart(businessGrowthCanvas, {
+            type: 'line',
+            data: {
+                labels: growthLabels,
+                datasets: [
+                    {
+                        label: 'Sales',
+                        data: growthSales,
+                        borderWidth: 3,
+                        tension: 0.35,
+                        fill: false,
+                        pointRadius: 4
+                    },
+                    {
+                        label: 'Net Profit',
+                        data: growthProfit,
+                        borderWidth: 3,
+                        tension: 0.35,
+                        fill: false,
+                        pointRadius: 4,
+                        borderDash: [7, 5]
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': KES ' + context.raw;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return 'KES ' + value;
+                            }
+                        }
+                    }
+                }
+            }
+        });
     }
 </script>
 
