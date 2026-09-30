@@ -198,6 +198,7 @@
         {% if is_admin or is_manager %}
             <a href="/staff/attendance/">🕒 Attendance</a>
             <a href="/expenses/">💸 Expenses & Bills</a>
+            <a href="{% url 'financial_report' %}">💹 Financial Report</a>
         {% endif %}
 
         {% if is_admin %}
@@ -247,6 +248,7 @@
             {% if is_admin or is_manager %}
                 <a href="/staff/attendance/">🕒 Attendance</a>
                 <a href="/expenses/">💸 Expenses & Bills</a>
+                <a href="{% url 'financial_report' %}">💹 Financial Report</a>
             {% endif %}
 
             {% if is_admin %}
