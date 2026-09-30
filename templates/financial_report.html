@@ -1,0 +1,239 @@
+{% extends 'base.html' %}
+
+{% block title %}Financial Report - Nelishakeyz{% endblock %}
+
+{% block extra_css %}
+<style>
+    .finance-header {
+        background: linear-gradient(135deg, #111827, #1f2937);
+        color: white;
+        border-radius: 20px;
+        padding: 24px;
+        margin-bottom: 20px;
+    }
+
+    .finance-card {
+        border: 0;
+        border-radius: 18px;
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+        height: 100%;
+    }
+
+    .finance-label {
+        color: #6b7280;
+        font-size: 13px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: .5px;
+    }
+
+    .finance-value {
+        font-size: 28px;
+        font-weight: 800;
+        margin-top: 6px;
+    }
+
+    .finance-icon {
+        font-size: 28px;
+    }
+
+    .breakdown-table th {
+        color: #6b7280;
+        font-size: 13px;
+        text-transform: uppercase;
+    }
+
+    .profit-positive {
+        color: #15803d;
+    }
+
+    .profit-negative {
+        color: #b91c1c;
+    }
+
+    @media (max-width: 576px) {
+        .finance-header {
+            padding: 18px;
+        }
+
+        .finance-value {
+            font-size: 23px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="finance-header">
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+        <div>
+            <h3 class="mb-1">📊 Financial Report</h3>
+            <div class="text-white-50">
+                {{ period_start|date:"d M Y" }} - {{ period_end|date:"d M Y" }}
+            </div>
+        </div>
+
+        <form method="get" class="d-flex flex-wrap gap-2">
+            <select name="month" class="form-select form-select-sm" style="width: 145px;">
+                {% for month_number, month_name in months %}
+                    <option value="{{ month_number }}" {% if month_number == selected_month %}selected{% endif %}>
+                        {{ month_name }}
+                    </option>
+                {% endfor %}
+            </select>
+
+            <select name="year" class="form-select form-select-sm" style="width: 105px;">
+                {% for year in years %}
+                    <option value="{{ year }}" {% if year == selected_year %}selected{% endif %}>
+                        {{ year }}
+                    </option>
+                {% endfor %}
+            </select>
+
+            <button class="btn btn-light btn-sm px-3" type="submit">
+                View Report
+            </button>
+        </form>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card finance-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <div class="finance-label">Total Sales</div>
+                        <div class="finance-value text-primary">
+                            KES {{ total_sales|floatformat:2 }}
+                        </div>
+                    </div>
+                    <div class="finance-icon">💰</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card finance-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <div class="finance-label">Total Commission</div>
+                        <div class="finance-value text-warning">
+                            KES {{ total_commission|floatformat:2 }}
+                        </div>
+                    </div>
+                    <div class="finance-icon">👥</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card finance-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <div class="finance-label">Total Expenses</div>
+                        <div class="finance-value text-danger">
+                            KES {{ total_expenses|floatformat:2 }}
+                        </div>
+                    </div>
+                    <div class="finance-icon">💸</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card finance-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <div class="finance-label">Net Profit</div>
+                        <div class="finance-value {% if net_profit < 0 %}profit-negative{% else %}profit-positive{% endif %}">
+                            KES {{ net_profit|floatformat:2 }}
+                        </div>
+                    </div>
+                    <div class="finance-icon">📈</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<div class="card finance-card">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <h5 class="mb-1">Financial Breakdown</h5>
+                <small class="text-muted">
+                    Net Profit = Sales - Commission - Paid Expenses
+                </small>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table align-middle breakdown-table mb-0">
+                <thead>
+                    <tr>
+                        <th>Category</th>
+                        <th class="text-end">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Service / Appointment Sales</td>
+                        <td class="text-end">KES {{ appointment_sales|floatformat:2 }}</td>
+                    </tr>
+                    <tr>
+                        <td>Quick Task Sales</td>
+                        <td class="text-end">KES {{ quick_task_sales|floatformat:2 }}</td>
+                    </tr>
+                    <tr class="table-light">
+                        <td><strong>Total Sales</strong></td>
+                        <td class="text-end"><strong>KES {{ total_sales|floatformat:2 }}</strong></td>
+                    </tr>
+
+                    <tr>
+                        <td>Service Commission</td>
+                        <td class="text-end">KES {{ appointment_commission|floatformat:2 }}</td>
+                    </tr>
+                    <tr>
+                        <td>Quick Task Commission</td>
+                        <td class="text-end">KES {{ quick_task_commission|floatformat:2 }}</td>
+                    </tr>
+                    <tr class="table-light">
+                        <td><strong>Total Staff Commission</strong></td>
+                        <td class="text-end"><strong>KES {{ total_commission|floatformat:2 }}</strong></td>
+                    </tr>
+
+                    <tr>
+                        <td>Paid Expenses & Bills</td>
+                        <td class="text-end">KES {{ total_expenses|floatformat:2 }}</td>
+                    </tr>
+                    <tr>
+                        <td>
+                            Unpaid Bills
+                            <small class="text-muted">(not deducted from net profit)</small>
+                        </td>
+                        <td class="text-end">KES {{ unpaid_bills|floatformat:2 }}</td>
+                    </tr>
+
+                    <tr class="{% if net_profit < 0 %}table-danger{% else %}table-success{% endif %}">
+                        <td><strong>NET PROFIT</strong></td>
+                        <td class="text-end">
+                            <strong>KES {{ net_profit|floatformat:2 }}</strong>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
