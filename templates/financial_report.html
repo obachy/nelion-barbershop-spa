@@ -137,6 +137,22 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between">
                     <div>
+                        <div class="finance-label">Total Penalties</div>
+                        <div class="finance-value text-danger">
+                            KES {{ total_penalties|floatformat:2 }}
+                        </div>
+                    </div>
+                    <div class="finance-icon">⚠️</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="card finance-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
                         <div class="finance-label">Total Expenses</div>
                         <div class="finance-value text-danger">
                             KES {{ total_expenses|floatformat:2 }}
@@ -172,7 +188,7 @@
             <div>
                 <h5 class="mb-1">Financial Breakdown</h5>
                 <small class="text-muted">
-                    Net Profit = Sales - Commission - Paid Expenses
+                    Net Profit = Sales - Net Staff Payout - Paid Expenses
                 </small>
             </div>
         </div>
@@ -210,6 +226,14 @@
                     <tr class="table-light">
                         <td><strong>Total Staff Commission</strong></td>
                         <td class="text-end"><strong>KES {{ total_commission|floatformat:2 }}</strong></td>
+                    </tr>
+                    <tr>
+                        <td>Total Staff Penalties</td>
+                        <td class="text-end text-danger">- KES {{ total_penalties|floatformat:2 }}</td>
+                    </tr>
+                    <tr class="table-light">
+                        <td><strong>Net Staff Payout</strong></td>
+                        <td class="text-end"><strong>KES {{ net_staff_payout|floatformat:2 }}</strong></td>
                     </tr>
 
                     <tr>
