@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from .financial_reports import financial_report
 from .views import (
     public_staff_attendance,
     public_staff_check_in,
@@ -54,6 +55,7 @@ from .views import (
 
 urlpatterns = [
     path('', dashboard, name='dashboard'),
+    path('financial-report/', financial_report, name='financial_report'),
 
     path('book-appointment/', book_appointment, name='book_appointment'),
     path('book/', client_booking, name='client_booking'),
