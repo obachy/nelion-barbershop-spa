@@ -138,20 +138,25 @@ def dashboard(request):
 
     analytics_end = min(today, period_end)
 
-    # Today sales, including appointments + quick tasks
+    # Today sales - only completed and approved work
     appointment_sales_today = Appointment.objects.filter(
         status='Completed',
+        approval_status='Approved',
         date=today
     ).aggregate(total=Sum('service__price'))['total'] or 0
 
     quick_task_sales_today = QuickTaskSale.objects.filter(
         status='Completed',
+        approval_status='Approved',
         created_at__date=today
     ).aggregate(total=Sum('sale_amount'))['total'] or 0
 
-    todays_revenue = Decimal(str(appointment_sales_today)) + Decimal(str(quick_task_sales_today))
+    todays_revenue = (
+        Decimal(str(appointment_sales_today))
+        + Decimal(str(quick_task_sales_today))
+    )
 
-    # Income per day this month
+    # Income per day - only completed and approved work
     daily_labels = []
     daily_sales = []
 
@@ -160,39 +165,49 @@ def dashboard(request):
     while current_date <= analytics_end:
         appointment_total = Appointment.objects.filter(
             status='Completed',
+            approval_status='Approved',
             date=current_date
         ).aggregate(total=Sum('service__price'))['total'] or 0
 
         quick_task_total = QuickTaskSale.objects.filter(
             status='Completed',
+            approval_status='Approved',
             created_at__date=current_date
         ).aggregate(total=Sum('sale_amount'))['total'] or 0
 
-        total_income = Decimal(str(appointment_total)) + Decimal(str(quick_task_total))
+        total_income = (
+            Decimal(str(appointment_total))
+            + Decimal(str(quick_task_total))
+        )
 
         daily_labels.append(current_date.strftime('%d %b'))
         daily_sales.append(float(total_income))
 
         current_date += timedelta(days=1)
 
-    # Monthly income
+    # Monthly income - only completed and approved work
     monthly_labels = []
     monthly_sales = []
 
     for month in range(1, 13):
         appointment_total = Appointment.objects.filter(
             status='Completed',
+            approval_status='Approved',
             date__month=month,
             date__year=today.year
         ).aggregate(total=Sum('service__price'))['total'] or 0
 
         quick_task_total = QuickTaskSale.objects.filter(
             status='Completed',
+            approval_status='Approved',
             created_at__month=month,
             created_at__year=today.year
         ).aggregate(total=Sum('sale_amount'))['total'] or 0
 
-        total_month_income = Decimal(str(appointment_total)) + Decimal(str(quick_task_total))
+        total_month_income = (
+            Decimal(str(appointment_total))
+            + Decimal(str(quick_task_total))
+        )
 
         monthly_labels.append(str(month))
         monthly_sales.append(float(total_month_income))
@@ -1782,7 +1797,13 @@ def expenses_list(request):
     expenses = Expense.objects.filter(
         expense_date__month=selected_month,
         expense_date__year=selected_year
-    ).order_by('-expense_date', '-created_at')
+    )
+
+    # Managers can see expenses only. Bills remain Admin-only.
+    if is_manager(request.user) and not is_admin(request.user):
+        expenses = expenses.filter(expense_type='Expense')
+
+    expenses = expenses.order_by('-expense_date', '-created_at')
 
     total_expenses = expenses.filter(expense_type='Expense').aggregate(
         total=Sum('amount')
@@ -1810,15 +1831,20 @@ def expenses_list(request):
         'unpaid_bills': unpaid_bills,
         'paid_total': paid_total,
         'is_admin': is_admin(request.user),
+        'is_manager': is_manager(request.user),
         'is_staff': is_staff(request.user),
     })
 
 
 @login_required
-@user_passes_test(is_admin_manager_or_staff)
+@user_passes_test(is_admin_or_manager)
 def add_expense(request):
     if request.method == 'POST':
-        expense_type = request.POST.get('expense_type')
+        # Managers can create expenses only. Bills are Admin-only.
+        if is_admin(request.user):
+            expense_type = request.POST.get('expense_type') or 'Expense'
+        else:
+            expense_type = 'Expense'
         title = request.POST.get('title')
         amount = Decimal(str(request.POST.get('amount') or 0))
         payment_method = request.POST.get('payment_method')
@@ -1826,6 +1852,7 @@ def add_expense(request):
         expense_date = request.POST.get('expense_date')
         due_date = request.POST.get('due_date') or None
         notes = request.POST.get('notes')
+        receipt = request.FILES.get('receipt')
 
         Expense.objects.create(
             expense_type=expense_type,
@@ -1836,6 +1863,7 @@ def add_expense(request):
             expense_date=expense_date,
             due_date=due_date,
             notes=notes,
+            receipt=receipt,
         )
 
         messages.success(request, "Expense/Bill added successfully.")
@@ -1843,6 +1871,7 @@ def add_expense(request):
 
     return render(request, 'add_expense.html', {
         'is_admin': is_admin(request.user),
+        'is_manager': is_manager(request.user),
         'is_staff': is_staff(request.user),
     })
 
@@ -1850,7 +1879,16 @@ def add_expense(request):
 @login_required
 @user_passes_test(is_admin_or_manager)
 def mark_expense_paid(request, expense_id):
-    expense = get_object_or_404(Expense, id=expense_id)
+    if is_admin(request.user):
+        expense = get_object_or_404(Expense, id=expense_id)
+    else:
+        # Managers can only access Expense records, never Bills.
+        expense = get_object_or_404(
+            Expense,
+            id=expense_id,
+            expense_type='Expense'
+        )
+
     expense.status = 'Paid'
     expense.save()
     messages.success(request, "Bill marked as paid.")
@@ -2208,6 +2246,7 @@ def quick_task_sale(request):
         client_name = request.POST.get('client_name', '').strip()
         client_phone = request.POST.get('client_phone', '').strip()
         sale_amount = Decimal(str(request.POST.get('sale_amount') or 0))
+        payment_method = request.POST.get('payment_method') or 'Cash'
         selected_staff_ids = request.POST.getlist('staff_ids')
 
         if not task_name:
@@ -2248,6 +2287,7 @@ def quick_task_sale(request):
             client_name=client_name if client_name else None,
             client_phone=client_phone if client_phone else None,
             sale_amount=sale_amount,
+            payment_method=payment_method,
             status='Completed',
             created_by=request.user,
         )

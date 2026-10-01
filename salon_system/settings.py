@@ -140,6 +140,10 @@ CSRF_COOKIE_NAME = os.environ.get("CSRF_COOKIE_NAME", "buzzcloud_csrftoken")
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
+# Uploaded files such as expense receipt copies
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/login/'

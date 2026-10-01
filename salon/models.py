@@ -204,6 +204,14 @@ class Expense(models.Model):
     expense_date = models.DateField()
     due_date = models.DateField(blank=True, null=True)
     notes = models.TextField(blank=True, null=True)
+
+    # Optional uploaded copy of the expense receipt
+    receipt = models.FileField(
+        upload_to='expense_receipts/',
+        blank=True,
+        null=True
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -252,6 +260,12 @@ class InvoiceItem(models.Model):
 
 class QuickTaskSale(models.Model):
 
+    PAYMENT_METHOD_CHOICES = [
+        ('Cash', 'Cash'),
+        ('M-Pesa', 'M-Pesa'),
+        ('Bank', 'Bank'),
+    ]
+
     STATUS_CHOICES = [
         ('Completed', 'Completed'),
         ('Cancelled', 'Cancelled'),
@@ -283,6 +297,12 @@ class QuickTaskSale(models.Model):
         max_digits=10,
         decimal_places=2,
         default=0
+    )
+
+    payment_method = models.CharField(
+        max_length=20,
+        choices=PAYMENT_METHOD_CHOICES,
+        default='Cash'
     )
 
     status = models.CharField(
