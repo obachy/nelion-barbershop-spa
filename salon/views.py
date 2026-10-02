@@ -156,6 +156,67 @@ def dashboard(request):
         + Decimal(str(quick_task_sales_today))
     )
 
+    # Payment method breakdown - completed and approved sales only
+    payment_methods = ['Cash', 'M-Pesa', 'Bank']
+
+    today_payment_totals = {}
+    month_payment_totals = {}
+
+    for payment_method in payment_methods:
+        # Today's appointment/service sales
+        appointment_today = Appointment.objects.filter(
+            status='Completed',
+            approval_status='Approved',
+            date=today,
+            payment_method=payment_method
+        ).aggregate(total=Sum('service__price'))['total'] or 0
+
+        # Today's quick task sales
+        quick_today = QuickTaskSale.objects.filter(
+            status='Completed',
+            approval_status='Approved',
+            created_at__date=today,
+            payment_method=payment_method
+        ).aggregate(total=Sum('sale_amount'))['total'] or 0
+
+        today_payment_totals[payment_method] = (
+            Decimal(str(appointment_today))
+            + Decimal(str(quick_today))
+        )
+
+        # Current calendar month's appointment/service sales
+        appointment_month = Appointment.objects.filter(
+            status='Completed',
+            approval_status='Approved',
+            date__year=today.year,
+            date__month=today.month,
+            payment_method=payment_method
+        ).aggregate(total=Sum('service__price'))['total'] or 0
+
+        # Current calendar month's quick task sales
+        quick_month = QuickTaskSale.objects.filter(
+            status='Completed',
+            approval_status='Approved',
+            created_at__year=today.year,
+            created_at__month=today.month,
+            payment_method=payment_method
+        ).aggregate(total=Sum('sale_amount'))['total'] or 0
+
+        month_payment_totals[payment_method] = (
+            Decimal(str(appointment_month))
+            + Decimal(str(quick_month))
+        )
+
+    today_payment_total = sum(
+        today_payment_totals.values(),
+        Decimal('0')
+    )
+
+    month_payment_total = sum(
+        month_payment_totals.values(),
+        Decimal('0')
+    )
+
     # Income per day - only completed and approved work
     daily_labels = []
     daily_sales = []
@@ -577,6 +638,18 @@ def dashboard(request):
 
         'todays_revenue': todays_revenue,
 
+        'today_payment_totals': today_payment_totals,
+        'today_payment_total': today_payment_total,
+        'today_cash': today_payment_totals['Cash'],
+        'today_mpesa': today_payment_totals['M-Pesa'],
+        'today_bank': today_payment_totals['Bank'],
+
+        'month_payment_totals': month_payment_totals,
+        'month_payment_total': month_payment_total,
+        'month_cash': month_payment_totals['Cash'],
+        'month_mpesa': month_payment_totals['M-Pesa'],
+        'month_bank': month_payment_totals['Bank'],
+
         'staff_labels': json.dumps(staff_labels, cls=DjangoJSONEncoder),
         'staff_jobs': json.dumps(staff_jobs, cls=DjangoJSONEncoder),
 
@@ -871,6 +944,16 @@ def my_commission(request):
 
     total_commission = appointment_total + quick_total
 
+    # Penalties for this staff member only, for the selected pay period
+    total_penalties = StaffPenalty.objects.filter(
+        staff=staff,
+        date__range=[period_start, period_end]
+    ).aggregate(
+        total=Sum('amount')
+    )['total'] or Decimal('0')
+
+    total_penalties = Decimal(str(total_penalties))
+
     months = [
         (1, 'January'),
         (2, 'February'),
@@ -892,6 +975,7 @@ def my_commission(request):
         'staff': staff,
         'rows': rows,
         'total_commission': total_commission,
+        'total_penalties': total_penalties,
         'appointment_total': appointment_total,
         'quick_total': quick_total,
         'selected_month': selected_month,

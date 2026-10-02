@@ -134,6 +134,127 @@
 
 </div>
 
+{% if is_admin or is_manager %}
+<!-- Payment Breakdown -->
+<div class="row g-4 mb-4">
+
+    <!-- Today's Payments -->
+    <div class="col-lg-6">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body p-4">
+
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <h5 class="fw-bold mb-0">Today's Payments</h5>
+                        <small class="text-muted">Approved sales received today</small>
+                    </div>
+                    <span class="fs-3">💳</span>
+                </div>
+
+                <div class="row g-3">
+
+                    <div class="col-6">
+                        <div class="bg-light rounded-3 p-3">
+                            <small class="text-muted">💵 Cash</small>
+                            <h5 class="fw-bold mb-0 mt-1">
+                                KES {{ today_cash|floatformat:2 }}
+                            </h5>
+                        </div>
+                    </div>
+
+                    <div class="col-6">
+                        <div class="bg-light rounded-3 p-3">
+                            <small class="text-muted">📱 M-Pesa</small>
+                            <h5 class="fw-bold mb-0 mt-1">
+                                KES {{ today_mpesa|floatformat:2 }}
+                            </h5>
+                        </div>
+                    </div>
+
+                    <div class="col-6">
+                        <div class="bg-light rounded-3 p-3">
+                            <small class="text-muted">🏦 Bank</small>
+                            <h5 class="fw-bold mb-0 mt-1">
+                                KES {{ today_bank|floatformat:2 }}
+                            </h5>
+                        </div>
+                    </div>
+
+                    <div class="col-6">
+                        <div class="bg-dark text-white rounded-3 p-3">
+                            <small>Total Today</small>
+                            <h5 class="fw-bold mb-0 mt-1">
+                                KES {{ today_payment_total|floatformat:2 }}
+                            </h5>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if is_admin %}
+    <!-- This Month's Payments -->
+    <div class="col-lg-6">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body p-4">
+
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <h5 class="fw-bold mb-0">This Month's Payments</h5>
+                        <small class="text-muted">Approved sales received this calendar month</small>
+                    </div>
+                    <span class="fs-3">📊</span>
+                </div>
+
+                <div class="row g-3">
+
+                    <div class="col-6">
+                        <div class="bg-light rounded-3 p-3">
+                            <small class="text-muted">💵 Cash</small>
+                            <h5 class="fw-bold mb-0 mt-1">
+                                KES {{ month_cash|floatformat:2 }}
+                            </h5>
+                        </div>
+                    </div>
+
+                    <div class="col-6">
+                        <div class="bg-light rounded-3 p-3">
+                            <small class="text-muted">📱 M-Pesa</small>
+                            <h5 class="fw-bold mb-0 mt-1">
+                                KES {{ month_mpesa|floatformat:2 }}
+                            </h5>
+                        </div>
+                    </div>
+
+                    <div class="col-6">
+                        <div class="bg-light rounded-3 p-3">
+                            <small class="text-muted">🏦 Bank</small>
+                            <h5 class="fw-bold mb-0 mt-1">
+                                KES {{ month_bank|floatformat:2 }}
+                            </h5>
+                        </div>
+                    </div>
+
+                    <div class="col-6">
+                        <div class="bg-dark text-white rounded-3 p-3">
+                            <small>Total This Month</small>
+                            <h5 class="fw-bold mb-0 mt-1">
+                                KES {{ month_payment_total|floatformat:2 }}
+                            </h5>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+{% endif %}
+
 <!-- Analytics -->
 <div class="mb-3">
     <h4 class="fw-bold mb-0">Performance Analytics</h4>
@@ -144,7 +265,7 @@
 
 <div class="row g-4 mb-4">
 
-    {% if is_admin or is_manager %}
+    {% if is_admin %}
     <div class="col-12">
         <div class="card chart-card shadow-sm">
             <div class="card-body">
@@ -158,9 +279,11 @@
                     </div>
                     <div class="d-flex align-items-center gap-2">
                         <div class="chart-icon">📊</div>
+                        {% if is_admin %}
                         <a href="{% url 'financial_report' %}" class="btn btn-sm btn-outline-dark">
                             Full Financial Report
                         </a>
+                        {% endif %}
                     </div>
                 </div>
 

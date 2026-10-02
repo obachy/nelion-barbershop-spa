@@ -9,16 +9,15 @@ from django.utils import timezone
 from .models import Appointment, Expense, QuickTaskCommission, QuickTaskSale, StaffPenalty
 
 
-def is_admin_or_manager(user):
+def is_admin(user):
     return user.is_authenticated and (
         user.is_superuser
         or user.groups.filter(name='Admin').exists()
-        or user.groups.filter(name='Manager').exists()
     )
 
 
 @login_required
-@user_passes_test(is_admin_or_manager)
+@user_passes_test(is_admin)
 def financial_report(request):
     today = timezone.localdate()
 
