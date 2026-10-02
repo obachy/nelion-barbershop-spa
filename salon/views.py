@@ -184,21 +184,19 @@ def dashboard(request):
             + Decimal(str(quick_today))
         )
 
-        # Current calendar month's appointment/service sales
+        # Current business period payment totals - same period as Total Sales
         appointment_month = Appointment.objects.filter(
             status='Completed',
             approval_status='Approved',
-            date__year=today.year,
-            date__month=today.month,
+            date__range=[period_start, period_end],
             payment_method=payment_method
         ).aggregate(total=Sum('service__price'))['total'] or 0
 
-        # Current calendar month's quick task sales
+        # Current business period quick task sales
         quick_month = QuickTaskSale.objects.filter(
             status='Completed',
             approval_status='Approved',
-            created_at__year=today.year,
-            created_at__month=today.month,
+            created_at__date__range=[period_start, period_end],
             payment_method=payment_method
         ).aggregate(total=Sum('sale_amount'))['total'] or 0
 
